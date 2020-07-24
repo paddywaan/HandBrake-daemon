@@ -8,16 +8,18 @@ namespace HandbrakeCLI_daemon
 {
     public class Watch : IComparable
     {
-        public Watch(string source, string destination, bool postDeletion)
+        public Watch(string source, string destination, bool postDeletion, string profile)
         {
             this.Source = source ?? throw new ArgumentNullException(nameof(source));
             this.Destination = destination ?? throw new ArgumentNullException(nameof(destination));
             this.PostDeletion = postDeletion;
+            this.Profile = profile ?? throw new ArgumentNullException(nameof(profile));
         }
 
         public string Source { private set; get; }
         public string Destination { private set; get; }
         public bool PostDeletion { private set; get; }
+        public string Profile { private set; get; }
 
         public int CompareTo(object obj)
         {
@@ -29,24 +31,38 @@ namespace HandbrakeCLI_daemon
     public interface IWatcherService
     {
         public void ToggleWatchers(bool? state = null);
-        public void AddWatch(string source, string destination, bool postDeletion);
+        public void AddWatch(string source, string destination, bool postDeletion, string profile);
         public void RemoveWatch(Watch watch);
     }
 
     public class WatcherService : IWatcherService
     {
-        private LoggingService LoggingService;
+        private readonly LoggingService logger;
         private List<Watch> Watching = new List<Watch>();
         private readonly List<FileSystemWatcher> Watchers = new List<FileSystemWatcher>();
+        private IQueueService _QueueService;
         private readonly string WatchPath;
 
-        public WatcherService(string path, LoggingService loggingService)
+        public WatcherService(string path, LoggingService loggingService, IQueueService queueService)
         {
-            LoggingService = loggingService;
+            logger = loggingService;
+            _QueueService = queueService;
             WatchPath = path;
             if (!Directory.Exists(Daemon.ConfDir)) Directory.CreateDirectory(Daemon.ConfDir);
             if (!File.Exists(WatchPath)) File.Create(WatchPath).Dispose();
             LoadWatchlist();
+            ScanWatchDirs();
+        }
+
+        private void ScanWatchDirs()
+        {
+            foreach(var watch in Watching)
+            {
+                foreach(var file in Directory.GetFiles(watch.Source))
+                {
+                    _QueueService.Add(new HBQueueItem(watch, false, file));
+                }
+            }
         }
 
         FileSystemWatcher CreateWatcher(Watch instance)
@@ -68,11 +84,11 @@ namespace HandbrakeCLI_daemon
             }
         }
 
-        public void AddWatch(string source, string destination, bool postDeletion)
+        public void AddWatch(string source, string destination, bool postDeletion, string profile)
         {
             if (!Directory.Exists(source)) throw new DirectoryNotFoundException(source);
             else if (!Directory.Exists(destination)) throw new DirectoryNotFoundException(destination);
-            else Watching.Add(new Watch(source, destination, postDeletion));
+            else Watching.Add(new Watch(source, destination, postDeletion, profile));
             Serialize();
         }
         public void RemoveWatch(Watch watch)
@@ -82,14 +98,14 @@ namespace HandbrakeCLI_daemon
 
         private void Watcher_FileDeleted(object sender, FileSystemEventArgs e, Watch instance)
         {
-            LoggingService.Log($"Deleted: {e.FullPath}", LogSeverity.Info);
-            //throw new NotImplementedException();
+            logger.Log($"Deleted: {e.FullPath}", LogSeverity.Info);
+            _QueueService.Remove(instance, e.FullPath);
         }
 
         private void Watcher_FileCreated(object sender, FileSystemEventArgs e, Watch instance)
         {
-            LoggingService.Log($"Created: {e.FullPath}", LogSeverity.Info);
-            //throw new NotImplementedException();
+            logger.Log($"Created: {e.FullPath}", LogSeverity.Info);
+            _QueueService.Add(new HBQueueItem(instance, false, e.FullPath));
         }
 
         private void Serialize()

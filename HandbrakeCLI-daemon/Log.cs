@@ -24,7 +24,7 @@ namespace HandbrakeCLI_daemon
         {
 
         }
-        public static void Log(string message, LogSeverity severity, Exception ex = null)
+        public void Log(string message, LogSeverity severity, Exception ex = null)
         {
             Console.WriteLine(message);
         }

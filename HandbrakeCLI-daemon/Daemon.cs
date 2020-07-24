@@ -20,6 +20,7 @@ namespace HandbrakeCLI_daemon
         
         private static IServiceProvider Services;
         private static IWatcherService _WatcherService;
+        private static IQueueService _QueueService;
         private static LoggingService _LoggingService;
         private static readonly string APPDATA = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         public static char Slash = Path.DirectorySeparatorChar;
@@ -29,12 +30,13 @@ namespace HandbrakeCLI_daemon
         static void Main(string[] args)
         {
             _LoggingService = new LoggingService();
-            _WatcherService = new WatcherService(Watchpath, _LoggingService);
+            _QueueService = new QueueService(_LoggingService);
+            _WatcherService = new WatcherService(Watchpath, _LoggingService, _QueueService);
             
             switch (args[0])
             {
                 case "add":
-                    _WatcherService.AddWatch(args[1], args[2], bool.Parse(args[3]));
+                    _WatcherService.AddWatch(args[1], args[2], bool.Parse(args[3]), args[4]);
                     break;
                 case "remove":
                     break;
@@ -59,8 +61,9 @@ namespace HandbrakeCLI_daemon
         private static void ConfigureServices()
         {
             Services = new ServiceCollection()
-                .AddSingleton(_WatcherService)
                 .AddSingleton(_LoggingService)
+                .AddSingleton(_QueueService)
+                .AddSingleton(_WatcherService)
                 .BuildServiceProvider();
         }
     }

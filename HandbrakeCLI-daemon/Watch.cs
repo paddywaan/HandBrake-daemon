@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 
 namespace HandbrakeCLI_daemon
 {
@@ -13,13 +14,20 @@ namespace HandbrakeCLI_daemon
             this.Source = source ?? throw new ArgumentNullException(nameof(source));
             this.Destination = destination ?? throw new ArgumentNullException(nameof(destination));
             this.PostDeletion = postDeletion;
-            this.Profile = profile ?? throw new ArgumentNullException(nameof(profile));
+            this.ProfilePath = profile ?? throw new ArgumentNullException(nameof(profile));
         }
 
         public string Source { private set; get; }
         public string Destination { private set; get; }
         public bool PostDeletion { private set; get; }
-        public string Profile { private set; get; }
+        public string ProfilePath { private set; get; }
+        public string ProfileName
+        {
+            get
+            {
+                return Path.GetFileName(ProfilePath).Replace(".json",String.Empty);
+            }
+        }
 
         public int CompareTo(object obj)
         {
@@ -60,7 +68,7 @@ namespace HandbrakeCLI_daemon
             {
                 foreach(var file in Directory.GetFiles(watch.Source))
                 {
-                    _QueueService.Add(new HBQueueItem(watch, false, file));
+                    _QueueService.Add(new HBQueueItem(watch, false, file, file.Replace(watch.Source, String.Empty)));
                 }
             }
         }
@@ -88,6 +96,7 @@ namespace HandbrakeCLI_daemon
         {
             if (!Directory.Exists(source)) throw new DirectoryNotFoundException(source);
             else if (!Directory.Exists(destination)) throw new DirectoryNotFoundException(destination);
+            else if (!File.Exists(profile)) throw new FileNotFoundException(profile);
             else Watching.Add(new Watch(source, destination, postDeletion, profile));
             Serialize();
         }
@@ -105,7 +114,7 @@ namespace HandbrakeCLI_daemon
         private void Watcher_FileCreated(object sender, FileSystemEventArgs e, Watch instance)
         {
             logger.Log($"Created: {e.FullPath}", LogSeverity.Info);
-            _QueueService.Add(new HBQueueItem(instance, false, e.FullPath));
+            _QueueService.Add(new HBQueueItem(instance, false, e.FullPath, e.Name));
         }
 
         private void Serialize()

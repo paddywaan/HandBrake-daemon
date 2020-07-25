@@ -11,12 +11,11 @@ namespace HandbrakeCLI_daemon
     class Daemon
     {
         /// <summary>
-        /// Halt/pause? Avoid plex?
         /// reccursive filestructure
-        /// file extention limitations
         /// dynamic subtitles (folder)?
+        /// temp dir output
         /// </summary>
-        
+
         private static IServiceProvider Services;
         private static IWatcherService _WatcherService;
         private static IQueueService _QueueService;

@@ -9,18 +9,20 @@ namespace HandbrakeCLI_daemon
 {
     public class Watch : IComparable
     {
-        public Watch(string source, string destination, bool postDeletion, string profile)
+        public Watch(string source, string destination, bool postDeletion, string profilePath, List<string> extentions)
         {
             this.Source = source ?? throw new ArgumentNullException(nameof(source));
             this.Destination = destination ?? throw new ArgumentNullException(nameof(destination));
             this.PostDeletion = postDeletion;
-            this.ProfilePath = profile ?? throw new ArgumentNullException(nameof(profile));
+            this.ProfilePath = profilePath ?? throw new ArgumentNullException(nameof(profilePath));
+            this.Extentions = extentions;
         }
 
         public string Source { private set; get; }
         public string Destination { private set; get; }
         public bool PostDeletion { private set; get; }
         public string ProfilePath { private set; get; }
+        public List<string> Extentions { private set; get; }
         public string ProfileName
         {
             get
@@ -39,7 +41,7 @@ namespace HandbrakeCLI_daemon
     public interface IWatcherService
     {
         public void ToggleWatchers(bool? state = null);
-        public void AddWatch(string source, string destination, bool postDeletion, string profile);
+        public void AddWatch(string source, string destination, bool postDeletion, string profile, List<string> ext = null);
         public void RemoveWatch(Watch watch);
     }
 
@@ -62,14 +64,31 @@ namespace HandbrakeCLI_daemon
             ScanWatchDirs();
         }
 
+        private void AddQueueItem(Watch watch, string filePath, List<string> subs = null)
+        {
+
+            if (watch.Extentions.Contains(Path.GetExtension(filePath)))
+                _QueueService.Add(new HBQueueItem(watch, false, filePath, Path.GetFileName(filePath)));
+            logger.Log($"SCANNER=> Media found: {filePath}", LogSeverity.Info);
+        }
+
         private void ScanWatchDirs()
         {
             foreach(var watch in Watching)
             {
-                foreach(var file in Directory.GetFiles(watch.Source))
-                {
-                    _QueueService.Add(new HBQueueItem(watch, false, file, file.Replace(watch.Source, String.Empty)));
-                }
+                ScanDir(watch, watch.Source);
+            }
+        }
+
+        private void ScanDir(Watch watch, string scanPath)
+        {
+            foreach (var dir in Directory.GetDirectories(scanPath))
+            {
+                ScanDir(watch, dir);
+            }
+            foreach (var file in Directory.GetFiles(scanPath))
+            {
+                AddQueueItem(watch, file);
             }
         }
 
@@ -79,6 +98,7 @@ namespace HandbrakeCLI_daemon
             {
                 Path = instance.Source
             };
+            watcher.IncludeSubdirectories = true;
             watcher.Created += (sender, e) => Watcher_FileCreated(sender, e, instance);
             watcher.Deleted += (sender, e) => Watcher_FileDeleted(sender, e, instance);
             return watcher;
@@ -92,12 +112,12 @@ namespace HandbrakeCLI_daemon
             }
         }
 
-        public void AddWatch(string source, string destination, bool postDeletion, string profile)
+        public void AddWatch(string source, string destination, bool postDeletion, string profile, List<string> ext = null)
         {
             if (!Directory.Exists(source)) throw new DirectoryNotFoundException(source);
             else if (!Directory.Exists(destination)) throw new DirectoryNotFoundException(destination);
             else if (!File.Exists(profile)) throw new FileNotFoundException(profile);
-            else Watching.Add(new Watch(source, destination, postDeletion, profile));
+            else Watching.Add(new Watch(source, destination, postDeletion, profile, (ext != null) ? ext : new List<string> { ".mp4",".mkv","avi"}));
             Serialize();
         }
         public void RemoveWatch(Watch watch)
@@ -107,14 +127,16 @@ namespace HandbrakeCLI_daemon
 
         private void Watcher_FileDeleted(object sender, FileSystemEventArgs e, Watch instance)
         {
-            logger.Log($"Deleted: {e.FullPath}", LogSeverity.Info);
+            logger.Log($"WATCHER=> File deleted: {e.FullPath}", LogSeverity.Info);
             _QueueService.Remove(instance, e.FullPath);
         }
 
         private void Watcher_FileCreated(object sender, FileSystemEventArgs e, Watch instance)
         {
-            logger.Log($"Created: {e.FullPath}", LogSeverity.Info);
-            _QueueService.Add(new HBQueueItem(instance, false, e.FullPath, e.Name));
+            logger.Log($"WATCHER=> File created: {e.FullPath}", LogSeverity.Info);
+            /*if (instance.Extentions.Contains(Path.GetExtension(e.FullPath)))
+                _QueueService.Add(new HBQueueItem(instance, false, e.FullPath, e.Name));*/
+            AddQueueItem(instance, e.FullPath);
         }
 
         private void Serialize()

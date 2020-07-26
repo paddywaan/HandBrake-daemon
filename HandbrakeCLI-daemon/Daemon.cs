@@ -64,5 +64,9 @@ namespace HandbrakeCLI_daemon
                 .AddSingleton(_WatcherService)
                 .BuildServiceProvider();
         }
+        public static IServiceProvider GetServices()
+        {
+            return Services;
+        }
     }
 }

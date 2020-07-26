@@ -13,19 +13,16 @@ namespace HandbrakeCLI_daemon
     public class HBQueueItem
     {
         public Watch WatchInstance;
-        private bool Processing;
-        private string fPath;
-        private string fName;
-        private string fExt;
-        private List<string> subtitles;
+        private readonly string fPath;
+        private readonly string fName;
+        private readonly string fExt;
 
-        public HBQueueItem(Watch watchInstance, bool processing, string fpath, string fname, List<string> subs = null)
+        public HBQueueItem(Watch watchInstance, string fpath, string fname)
         {
             WatchInstance = watchInstance;
             this.fPath = fpath;
             this.fName = fname;
             this.fExt = Path.GetExtension(fPath); //Regex.Match(fname, "[.][a-zA-Z0-9]{1,4}$").Value;
-            this.subtitles = subs;
         }
 
         public string FilePath
@@ -39,20 +36,20 @@ namespace HandbrakeCLI_daemon
                 return fName;
             }
         }
-        public List<string> Subtitles
+        public string Extention
         {
             get
             {
-                return subtitles;
+                return fExt;
             }
         }
     }
 
     public class QueueService : IQueueService
     {
-        private LoggingService logger;
+        private readonly LoggingService logger;
         private Queue<HBQueueItem> HBQueue;
-        private static string HBProc = "HandbrakeCLI";
+        private const string HBProc = "HandbrakeCLI";
         private const int SleepDelay = 5000;
         public QueueService(LoggingService loggingService)
         {

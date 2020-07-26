@@ -50,7 +50,7 @@ namespace HandbrakeCLI_daemon
         private readonly LoggingService logger;
         private List<Watch> Watching = new List<Watch>();
         private readonly List<FileSystemWatcher> Watchers = new List<FileSystemWatcher>();
-        private IQueueService _QueueService;
+        private readonly IQueueService _QueueService;
         private readonly string WatchPath;
 
         public WatcherService(string path, LoggingService loggingService, IQueueService queueService)
@@ -64,11 +64,11 @@ namespace HandbrakeCLI_daemon
             ScanWatchDirs();
         }
 
-        private void AddQueueItem(Watch watch, string filePath, List<string> subs = null)
+        private void AddQueueItem(Watch watch, string filePath)
         {
 
             if (watch.Extentions.Contains(Path.GetExtension(filePath)))
-                _QueueService.Add(new HBQueueItem(watch, false, filePath, Path.GetFileName(filePath)));
+                _QueueService.Add(new HBQueueItem(watch, filePath, Path.GetFileName(filePath)));
             logger.Log($"SCANNER=> Media found: {filePath}", LogSeverity.Info);
         }
 
@@ -117,7 +117,7 @@ namespace HandbrakeCLI_daemon
             if (!Directory.Exists(source)) throw new DirectoryNotFoundException(source);
             else if (!Directory.Exists(destination)) throw new DirectoryNotFoundException(destination);
             else if (!File.Exists(profile)) throw new FileNotFoundException(profile);
-            else Watching.Add(new Watch(source, destination, postDeletion, profile, (ext != null) ? ext : new List<string> { ".mp4",".mkv","avi"}));
+            else Watching.Add(new Watch(source, destination, postDeletion, profile, ext ?? new List<string> { ".mp4",".mkv","avi"}));
             Serialize();
         }
         public void RemoveWatch(Watch watch)

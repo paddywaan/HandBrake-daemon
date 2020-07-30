@@ -1,0 +1,10 @@
+﻿{
+  "profiles": {
+    "HandBrake_Daemon": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

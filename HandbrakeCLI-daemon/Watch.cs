@@ -1,9 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text.RegularExpressions;
 
 namespace HandbrakeCLI_daemon
 {
@@ -105,7 +103,12 @@ namespace HandbrakeCLI_daemon
         }
 
         public void ToggleWatchers(bool? state = null)
-        { 
+        {
+            if (Watchers.Count == 0)
+            {
+                logger.Log("No watchers detected. Add watchers to the service before starting it. `HandbrakeCLI-daemon --help` for more details.", LogSeverity.Warning);
+                Environment.Exit(1);
+            }
             foreach(var watcher in Watchers)
             {
                  watcher.EnableRaisingEvents = state ?? !watcher.EnableRaisingEvents;
@@ -133,7 +136,7 @@ namespace HandbrakeCLI_daemon
 
         private void Watcher_FileCreated(object sender, FileSystemEventArgs e, Watch instance)
         {
-            logger.Log($"WATCHER=> File created: {e.FullPath}", LogSeverity.Info);
+            //logger.Log($"WATCHER=> File created: {e.FullPath}", LogSeverity.Info);
             /*if (instance.Extentions.Contains(Path.GetExtension(e.FullPath)))
                 _QueueService.Add(new HBQueueItem(instance, false, e.FullPath, e.Name));*/
             AddQueueItem(instance, e.FullPath);

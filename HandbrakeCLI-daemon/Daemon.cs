@@ -27,6 +27,7 @@ namespace HandbrakeCLI_daemon
         private static readonly string Watchpath = ConfDir + "WatchList.json";
         static void Main(string[] args)
         {
+            if (args == null) args = new string[] {"help"};
             _LoggingService = new LoggingService();
             _QueueService = new QueueService(_LoggingService);
             _WatcherService = new WatcherService(Watchpath, _LoggingService, _QueueService);
@@ -54,6 +55,7 @@ namespace HandbrakeCLI_daemon
         public async Task MainAsync()
         {
             _WatcherService.ToggleWatchers();
+            _LoggingService.Log("Watchers have been started.", LogSeverity.Info);
             await Task.Delay(-1);
         }
         private static void ConfigureServices()

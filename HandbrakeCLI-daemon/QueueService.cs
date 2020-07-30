@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -49,7 +50,7 @@ namespace HandbrakeCLI_daemon
     {
         private readonly LoggingService logger;
         private Queue<HBQueueItem> HBQueue;
-        private const string HBProc = "HandbrakeCLI";
+        private const string HBProc = "HandBrakeCLI";
         private const int SleepDelay = 5000;
         public QueueService(LoggingService loggingService)
         {
@@ -84,10 +85,14 @@ namespace HandbrakeCLI_daemon
             {
                 if(HBQueue.Count > 0)
                 {
-                    if (GetFileProcessName(HBQueue.Peek().FilePath) == null)
-                    {
-                        var poppedQueue = HBQueue.Dequeue();
+                    if (IsFileReady(HBQueue.Peek().FilePath))
                         
+                            //logger.Log("File is not locked", LogSeverity.Verbose);
+                    //if (GetFileProcessName(HBQueue.Peek().FilePath) == null)
+                    /*{
+                        logger.Log($"File: {HBQueue.Peek().FilePath} is not locked. Processing...", LogSeverity.Verbose);
+                        var poppedQueue = HBQueue.Dequeue();
+
                         logger.Log($"Removed item from queue: {poppedQueue.FileName}", LogSeverity.Info);
                         logger.Log($"Queue is now: " + QueueString, LogSeverity.Verbose);
                         var argsSB = new StringBuilder();
@@ -101,7 +106,7 @@ namespace HandbrakeCLI_daemon
                             argsSB.Append(" --srt-lang \"" + String.Join(",", tup.Item2) + "\"");
                             argsSB.Append(" --all-subtitles");
                         }
-                        argsSB.Append($" -o \"{poppedQueue.WatchInstance.Destination +Daemon.Slash+ poppedQueue.FileName}\"");
+                        argsSB.Append($" -o \"{poppedQueue.WatchInstance.Destination + Daemon.Slash + poppedQueue.FileName}\"");
                         logger.Log($"Encoding {poppedQueue.FileName} using: {argsSB}", LogSeverity.Info);
                         Process p = new Process
                         {
@@ -109,12 +114,16 @@ namespace HandbrakeCLI_daemon
                         };
                         p.StartInfo.UseShellExecute = false;
                         p.StartInfo.RedirectStandardOutput = false;
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) p.StartInfo.RedirectStandardError = true;
+                        //p.StandardOutput.
                         p.StartInfo.CreateNoWindow = true;
                         p.Start();
+                        //string output = p.StandardOutput.ReadToEnd();
                         p.PriorityClass = ProcessPriorityClass.BelowNormal;
                         p.WaitForExit();
                         logger.Log("Encode completed.", LogSeverity.Verbose);
                     }
+                    else logger.Log("File is locked.", LogSeverity.Verbose);*/
                 }
                 Thread.Sleep(SleepDelay);
             }
@@ -158,13 +167,14 @@ namespace HandbrakeCLI_daemon
             }
             return "und";
         }
-        public static string GetFileProcessName(string filePath)
+        /*public static string GetFileProcessName(string filePath)
         {
             Process[] procs = Process.GetProcesses();
             string fileName = Path.GetFileName(filePath);
 
             foreach (Process proc in procs)
             {
+                if (new string[] { "Taskmgr" }.Contains(proc.ProcessName)) return null;
                 if (proc.MainWindowHandle != new IntPtr(0) && !proc.HasExited)
                 {
                     ProcessModule[] arr = new ProcessModule[proc.Modules.Count];
@@ -178,6 +188,20 @@ namespace HandbrakeCLI_daemon
             }
 
             return null;
+        }*/
+        public static bool IsFileReady(string filename)
+        {
+            // If the file can be opened for exclusive access it means that the file
+            // is no longer locked by another process.
+            try
+            {
+                using (FileStream inputStream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.None))
+                    return inputStream.Length > 0;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
     }
 

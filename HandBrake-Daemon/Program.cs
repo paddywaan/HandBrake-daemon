@@ -16,6 +16,7 @@ namespace HandBrake_Daemon
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
+                .UseSystemd()
                 .ConfigureServices((hostContext, services) =>
                 {
                     services.AddHostedService<Worker>();

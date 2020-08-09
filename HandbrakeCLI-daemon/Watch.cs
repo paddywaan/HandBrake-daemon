@@ -1,24 +1,31 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace HandbrakeCLI_daemon
 {
     public class Watch : IComparable
     {
-        public Watch(string source, string destination, bool postDeletion, string profilePath, List<string> extentions)
+        public Watch(string source, string destination, string origin, string profilePath, List<string> extentions)
         {
             this.Source = source ?? throw new ArgumentNullException(nameof(source));
             this.Destination = destination ?? throw new ArgumentNullException(nameof(destination));
-            this.PostDeletion = postDeletion;
             this.ProfilePath = profilePath ?? throw new ArgumentNullException(nameof(profilePath));
             this.Extentions = extentions;
+            this.Origin = origin;
         }
 
         public string Source { private set; get; }
         public string Destination { private set; get; }
-        public bool PostDeletion { private set; get; }
+        public string Origin { private set; get; }
         public string ProfilePath { private set; get; }
         public List<string> Extentions { private set; get; }
         public string ProfileName
@@ -32,42 +39,50 @@ namespace HandbrakeCLI_daemon
         public int CompareTo(object obj)
         {
             var watch = obj as Watch;
-           return (watch.Source.CompareTo(this.Source) == 0) ? watch.Destination.CompareTo(this.Destination) : watch.Source.CompareTo(this.Source);
+            return (watch.Source.CompareTo(this.Source) == 0) ? watch.Destination.CompareTo(this.Destination) : watch.Source.CompareTo(this.Source);
         }
     }
 
     public interface IWatcherService
     {
         public void ToggleWatchers(bool? state = null);
-        public void AddWatch(string source, string destination, bool postDeletion, string profile, List<string> ext = null);
+        //public void AddWatch(string source, string destination, string postDeletion, string profile, List<string> ext = null);
         public void RemoveWatch(Watch watch);
     }
 
-    public class WatcherService : IWatcherService
+    public class WatcherService : IWatcherService, IHostedService, IDisposable
     {
-        private readonly LoggingService logger;
         private List<Watch> Watching = new List<Watch>();
+        readonly ILogger<WatcherService> logger;
         private readonly List<FileSystemWatcher> Watchers = new List<FileSystemWatcher>();
-        private readonly IQueueService _QueueService;
-        private readonly string WatchPath;
+        private readonly QueueService _QueueService;
+        private static string ConfPath;
+        private static IHostApplicationLifetime HostApp;
 
-        public WatcherService(string path, LoggingService loggingService, IQueueService queueService)
+        public WatcherService(ILogger<WatcherService> loggingService, IHostApplicationLifetime hostApp /* IServiceProvider _provider*/)
         {
             logger = loggingService;
-            _QueueService = queueService;
-            WatchPath = path;
-            if (!Directory.Exists(Daemon.ConfDir)) Directory.CreateDirectory(Daemon.ConfDir);
-            if (!File.Exists(WatchPath)) File.Create(WatchPath).Dispose();
+            logger.LogInformation("Loading watchers");
+            ConfPath = (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) ? "/etc/HandBrakeDaemon.conf" : "HandBrakeDaemon.conf";
+            if (!File.Exists(ConfPath)) File.WriteAllText(ConfPath, "#Use double quotes for filepaths with spaces. Providing a null value in the argument for `Origin` directory will delete the original file post-transcoding. Providing a directory will move the file instead." + Environment.NewLine + 
+                "#\"source\" \"destination\" \"origin\" \"profile  path\" ext1,ext2,ext3..." + Environment.NewLine +
+                "#/mnt/media/source /mnt/media/destination  \"\" /mnt/media/profile.json \"\"");
+            HostApp = hostApp;
+            _QueueService = QueueService.Instance;
             LoadWatchlist();
             ScanWatchDirs();
         }
 
         private void AddQueueItem(Watch watch, string filePath)
         {
-
-            if (watch.Extentions.Contains(Path.GetExtension(filePath)))
+            //is directory?
+            logger.LogInformation($"{string.Join(",", watch.Extentions)} vs FileExt: {Path.GetExtension(filePath).Replace(".", string.Empty)}");
+            if (watch.Extentions.Contains(Path.GetExtension(filePath).Replace(".",string.Empty)))
+            {
                 _QueueService.Add(new HBQueueItem(watch, filePath, Path.GetFileName(filePath)));
-            logger.Log($"SCANNER=> Media found: {filePath}", LogSeverity.Info);
+                logger.LogInformation($"SCANNER=> Media found: {filePath}");
+            }
+            else logger.LogDebug($"Scanner=> Skipping: {filePath}");
         }
 
         private void ScanWatchDirs()
@@ -106,8 +121,9 @@ namespace HandbrakeCLI_daemon
         {
             if (Watchers.Count == 0)
             {
-                logger.Log("No watchers detected. Add watchers to the service before starting it. `HandbrakeCLI-daemon --help` for more details.", LogSeverity.Warning);
-                Environment.Exit(1);
+                logger.LogWarning("No watchers detected. Add watchers to the service before starting it.");
+                HostApp.StopApplication();
+                //Environment.Exit(0);
             }
             foreach(var watcher in Watchers)
             {
@@ -115,52 +131,85 @@ namespace HandbrakeCLI_daemon
             }
         }
 
-        public void AddWatch(string source, string destination, bool postDeletion, string profile, List<string> ext = null)
-        {
-            if (!Directory.Exists(source)) throw new DirectoryNotFoundException(source);
-            else if (!Directory.Exists(destination)) throw new DirectoryNotFoundException(destination);
-            else if (!File.Exists(profile)) throw new FileNotFoundException(profile);
-            else Watching.Add(new Watch(source, destination, postDeletion, profile, ext ?? new List<string> { ".mp4",".mkv","avi"}));
-            Serialize();
-        }
         public void RemoveWatch(Watch watch)
         {
-            if (Watching.Contains(watch)) Watching.Remove(watch);
+            if (Watching.Contains(watch))
+            {
+                Watching.Remove(watch);
+            }
         }
 
-        private void Watcher_FileDeleted(object sender, FileSystemEventArgs e, Watch instance)
+        private void Watcher_FileDeleted(object _, FileSystemEventArgs e, Watch instance)
         {
-            logger.Log($"WATCHER=> File deleted: {e.FullPath}", LogSeverity.Info);
+            logger.LogInformation($"WATCHER=> File deleted: {e.FullPath}");
             _QueueService.Remove(instance, e.FullPath);
         }
 
-        private void Watcher_FileCreated(object sender, FileSystemEventArgs e, Watch instance)
+        private void Watcher_FileCreated(object _, FileSystemEventArgs e, Watch instance)
         {
-            //logger.Log($"WATCHER=> File created: {e.FullPath}", LogSeverity.Info);
-            /*if (instance.Extentions.Contains(Path.GetExtension(e.FullPath)))
-                _QueueService.Add(new HBQueueItem(instance, false, e.FullPath, e.Name));*/
-            AddQueueItem(instance, e.FullPath);
+            if (File.GetAttributes(e.FullPath).HasFlag(FileAttributes.Directory))
+            {
+                ScanDir(instance, e.FullPath);
+            }
+            else
+            {
+                AddQueueItem(instance, e.FullPath);
+            }
         }
 
-        private void Serialize()
-        {
-            var data = JsonConvert.SerializeObject(Watching);
-            using StreamWriter sw = new StreamWriter(WatchPath);
-            sw.WriteLine(data);
-        }
-        private List<Watch> Deserialize()
-        {
-            using StreamReader sr = new StreamReader(WatchPath);
-            var data = sr.ReadToEnd();
-            return JsonConvert.DeserializeObject<List<Watch>>(data);
-        }
         private void LoadWatchlist()
         {
-            Watching = Deserialize() ?? new List<Watch>();
+            Watching = ReadConf(ConfPath) ?? new List<Watch>();
+            logger.LogInformation($"Loaded {Watching.Count} items to watchers.");
             foreach (var instance in Watching)
             {
                 Watchers.Add(CreateWatcher(instance));
             }
+        }
+
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            ToggleWatchers();
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            ToggleWatchers();
+            return Task.CompletedTask;
+        }
+
+        public void Dispose()
+        {
+            foreach(var watch in Watchers)
+            {
+                watch.Dispose();
+            }
+            //throw new NotImplementedException();
+        }
+        public static List<Watch> ReadConf(string fPath)
+        {
+            using StreamReader sr = new StreamReader(fPath);
+            string line;
+            var temp = new List<Watch>();
+            var splitReg = new Regex(@"[ ](?=(?:[^""]*""[^""]*"")*[^""]*$)");
+            while ((line = sr.ReadLine()) != null)
+            {
+                if (line.ToCharArray()[0] != '#')
+                {
+                    var args = splitReg.Split(line);
+                    var exts = (args[4] == "\"\"") ? new List<string> { "mp4", "mkv", "avi" } : args[4].Split(",").ToList();
+                    for(int i=0;i<2;i++)
+                    {
+                        if (!Directory.Exists(args[i])) throw new Exception($"Config references a directory which does not exist: {args[i]}");
+                    }
+                    if (!File.Exists(args[3])) throw new Exception($"Config references a filepath which does not exist: {args[3]}");
+                    var toAdd = new Watch(args[0], args[1], (args[2] == "\"\"") ? string.Empty : args[2], args[3], exts);
+                    temp.Add(toAdd);
+                }
+            }
+            if (temp.Count == 0) return null;
+            return temp;
         }
     }
 }

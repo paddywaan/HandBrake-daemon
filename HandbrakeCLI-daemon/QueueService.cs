@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Hosting;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -8,6 +9,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+
 
 namespace HandbrakeCLI_daemon
 {
@@ -46,17 +49,21 @@ namespace HandbrakeCLI_daemon
         }
     }
 
-    public class QueueService : IQueueService
+    public class QueueService : BackgroundService, IDisposable
     {
-        private readonly LoggingService logger;
+        public static QueueService Instance { get; private set; }
+        private readonly ILogger<QueueService> logger;
         private Queue<HBQueueItem> HBQueue;
         private const string HBProc = "HandBrakeCLI";
         private const int SleepDelay = 5000;
-        public QueueService(LoggingService loggingService)
+        private Process HBService;
+        private object queuelock;
+        public QueueService(ILogger<QueueService> logService)
         {
-            logger = loggingService;
+            logger = logService;
             HBQueue = new Queue<HBQueueItem>();
-            Task.Run(() => { OnStart(); });
+            //Task.Run(() => { OnStart(); });
+            Instance = this;
         }
         public string QueueString
         {
@@ -68,33 +75,30 @@ namespace HandbrakeCLI_daemon
             if (HBQueue.Where(x => x.FilePath == item.FilePath).ToList().Count > 0) throw new Exception(
                 $"QueueItem already exists: {item.FilePath}");
             HBQueue.Enqueue(item);
-            logger.Log($"Enqueued new item: {item.FileName}", LogSeverity.Info);
-            logger.Log($"Queue is now: " + QueueString, LogSeverity.Info);
+            logger.LogInformation($"Enqueued new item: {item.FileName}");
+            logger.LogDebug($"Queue is now: " + QueueString);
         }
         public void Remove(Watch watch, string fPath)
         {
             HBQueue = new Queue<HBQueueItem>(HBQueue.Where(x => x.FilePath != fPath));
-            logger.Log($"Removed item from queue: {Path.GetFileName(fPath)}", LogSeverity.Info);
-            logger.Log($"Queue is now: " + QueueString, LogSeverity.Info);
+            logger.LogInformation($"Removed item from queue: {Path.GetFileName(fPath)}");
+            logger.LogDebug($"Queue is now: " + QueueString);
         }
 
-        private void OnStart()
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            //Process p;
-            while(true)
+            while (!stoppingToken.IsCancellationRequested)
             {
-                if(HBQueue.Count > 0)
+                if (HBQueue.Count > 0)
                 {
                     if (IsFileReady(HBQueue.Peek().FilePath))
-                        
-                            //logger.Log("File is not locked", LogSeverity.Verbose);
-                    //if (GetFileProcessName(HBQueue.Peek().FilePath) == null)
-                    /*{
-                        logger.Log($"File: {HBQueue.Peek().FilePath} is not locked. Processing...", LogSeverity.Verbose);
+
+                    {
+                        logger.LogDebug($"File: {HBQueue.Peek().FilePath} is not locked. Processing...");
                         var poppedQueue = HBQueue.Dequeue();
 
-                        logger.Log($"Removed item from queue: {poppedQueue.FileName}", LogSeverity.Info);
-                        logger.Log($"Queue is now: " + QueueString, LogSeverity.Verbose);
+                        logger.LogInformation($"Removed item from queue: {poppedQueue.FileName}");
+                        logger.LogDebug($"Queue is now: " + QueueString);
                         var argsSB = new StringBuilder();
                         var baseArgs = $"--preset-import-file \"{poppedQueue.WatchInstance.ProfilePath}\" -Z {poppedQueue.WatchInstance.ProfileName}" +
                             $" -i \"{poppedQueue.FilePath}\"";
@@ -107,7 +111,7 @@ namespace HandbrakeCLI_daemon
                             argsSB.Append(" --all-subtitles");
                         }
                         argsSB.Append($" -o \"{poppedQueue.WatchInstance.Destination + Daemon.Slash + poppedQueue.FileName}\"");
-                        logger.Log($"Encoding {poppedQueue.FileName} using: {argsSB}", LogSeverity.Info);
+                        logger.LogInformation($"Encoding {poppedQueue.FileName} using: {argsSB}");
                         Process p = new Process
                         {
                             StartInfo = new ProcessStartInfo(HBProc, argsSB.ToString())
@@ -117,17 +121,32 @@ namespace HandbrakeCLI_daemon
                         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) p.StartInfo.RedirectStandardError = true;
                         //p.StandardOutput.
                         p.StartInfo.CreateNoWindow = true;
-                        p.Start();
+                        HBService = p;
+                        HBService.Start();
                         //string output = p.StandardOutput.ReadToEnd();
                         p.PriorityClass = ProcessPriorityClass.BelowNormal;
-                        p.WaitForExit();
-                        logger.Log("Encode completed.", LogSeverity.Verbose);
+                        await p.WaitForExitAsync();
+                        try
+                        {
+                            if (p.ExitCode == 0)
+                            {
+                                if (poppedQueue.WatchInstance.Origin == String.Empty) File.Delete(poppedQueue.FilePath);
+                                else File.Move(poppedQueue.FilePath, poppedQueue.WatchInstance.Origin);
+                                logger.LogInformation("Encode completed.");
+                            }
+                            else logger.LogError($"Error encoding file: {p.StandardOutput.ReadToEnd()}");
+                        }
+                        catch (IOException)
+                        {
+                            logger.LogError($"Permission denied to move/delete the source file. Please make sure the service is run as the appropriate group/owner for the source directory: {poppedQueue.FilePath}");
+                        }
                     }
-                    else logger.Log("File is locked.", LogSeverity.Verbose);*/
+                    else logger.LogWarning("File is locked.");
                 }
-                Thread.Sleep(SleepDelay);
+                await Task.Delay(SleepDelay, stoppingToken);
             }
         }
+
         private Tuple<List<string>,List<string>> GetSubs(string fPath)
         {
             var tempsrtPATH = new List<string>();
@@ -167,47 +186,68 @@ namespace HandbrakeCLI_daemon
             }
             return "und";
         }
-        /*public static string GetFileProcessName(string filePath)
-        {
-            Process[] procs = Process.GetProcesses();
-            string fileName = Path.GetFileName(filePath);
 
-            foreach (Process proc in procs)
-            {
-                if (new string[] { "Taskmgr" }.Contains(proc.ProcessName)) return null;
-                if (proc.MainWindowHandle != new IntPtr(0) && !proc.HasExited)
-                {
-                    ProcessModule[] arr = new ProcessModule[proc.Modules.Count];
-
-                    foreach (ProcessModule pm in proc.Modules)
-                    {
-                        if (pm.ModuleName == fileName)
-                            return proc.ProcessName;
-                    }
-                }
-            }
-
-            return null;
-        }*/
         public static bool IsFileReady(string filename)
         {
             // If the file can be opened for exclusive access it means that the file
             // is no longer locked by another process.
             try
             {
-                using (FileStream inputStream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.None))
-                    return inputStream.Length > 0;
+                using FileStream inputStream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.None);
+                return inputStream.Length > 0;
             }
             catch (Exception)
             {
                 return false;
             }
         }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+            if(HBService != null)
+                HBService.Dispose();
+        }
+        
     }
 
-    public interface IQueueService
+
+    /// <summary>
+    /// Taken from Ryan's WaitForExitAsync:
+    /// https://stackoverflow.com/questions/470256/process-waitforexit-asynchronously
+    /// https://stackoverflow.com/users/2266345/ryan
+    /// </summary>
+    public static class ProcessExtensions
     {
-        public void Add(HBQueueItem item);
-        public void Remove(Watch watch, string fname);
+        public static async Task WaitForExitAsync(this Process process, CancellationToken cancellationToken = default)
+        {
+            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            void Process_Exited(object sender, EventArgs e)
+            {
+                tcs.TrySetResult(true);
+            }
+
+            process.EnableRaisingEvents = true;
+            process.Exited += Process_Exited;
+
+            try
+            {
+                if (process.HasExited)
+                {
+                    return;
+                }
+
+                using (cancellationToken.Register(() => tcs.TrySetCanceled()))
+                {
+                    await tcs.Task.ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                process.Exited -= Process_Exited;
+            }
+        }
     }
+
 }

@@ -124,7 +124,7 @@ namespace HandbrakeCLI_daemon
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                logger.LogDebug("Execute ran.");
+                //logger.LogDebug("Execute ran.");
                 if (HBQueue.Count > 0)
                 {
                     //if (IsFileReady(HBQueue.Peek().FilePath))

@@ -149,6 +149,7 @@ namespace HandbrakeCLI_daemon
 
         private void Watcher_FileCreated(object _, FileSystemEventArgs e, Watch instance)
         {
+            logger.LogDebug($"{ e.FullPath} Detected FileCreated");
             if (File.GetAttributes(e.FullPath).HasFlag(FileAttributes.Directory))
             {
                 ScanDir(instance, e.FullPath);

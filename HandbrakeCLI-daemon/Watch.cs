@@ -14,13 +14,14 @@ namespace HandbrakeCLI_daemon
 {
     public class Watch : IComparable
     {
-        public Watch(string source, string destination, string origin, string profilePath, List<string> extentions)
+        public Watch(string source, string destination, string origin, string profilePath, List<string> extentions, bool show)
         {
             this.Source = source ?? throw new ArgumentNullException(nameof(source));
             this.Destination = destination ?? throw new ArgumentNullException(nameof(destination));
             this.ProfilePath = profilePath ?? throw new ArgumentNullException(nameof(profilePath));
             this.Extentions = extentions;
             this.Origin = origin;
+            this.Show = show;
         }
 
         public string Source { private set; get; }
@@ -28,6 +29,7 @@ namespace HandbrakeCLI_daemon
         public string Origin { private set; get; }
         public string ProfilePath { private set; get; }
         public List<string> Extentions { private set; get; }
+        public bool Show { private set; get; }
         public string ProfileName
         {
             get
@@ -113,7 +115,7 @@ namespace HandbrakeCLI_daemon
             };
             watcher.IncludeSubdirectories = true;
             watcher.Created += (sender, e) => Watcher_FileCreated(sender, e, instance);
-            watcher.Deleted += (sender, e) => Watcher_FileDeleted(sender, e, instance);
+            watcher.Deleted += (sender, e) => Watcher_FileDeleted(sender, e);
             return watcher;
         }
 
@@ -139,10 +141,10 @@ namespace HandbrakeCLI_daemon
             }
         }
 
-        private void Watcher_FileDeleted(object _, FileSystemEventArgs e, Watch instance)
+        private void Watcher_FileDeleted(object _, FileSystemEventArgs e)
         {
             logger.LogInformation($"WATCHER=> File deleted: {e.FullPath}");
-            _QueueService.Remove(instance, e.FullPath);
+            _QueueService.Remove(e.FullPath);
         }
 
         private void Watcher_FileCreated(object _, FileSystemEventArgs e, Watch instance)
@@ -192,10 +194,10 @@ namespace HandbrakeCLI_daemon
             using StreamReader sr = new StreamReader(fPath);
             string line;
             var temp = new List<Watch>();
-            var splitReg = new Regex(@"[ ](?=(?:[^""]*""[^""]*"")*[^""]*$)");
+            var splitReg = new Regex(@"[ ](?=(?:[^""]*""[^""]*"")*[^""]*$)"); //Splits string delimited by spaces, excluding spaces surrounded with quotes
             while ((line = sr.ReadLine()) != null)
             {
-                if (line.ToCharArray()[0] != '#')
+                if (!line.StartsWith('#'))
                 {
                     var args = splitReg.Split(line);
                     var exts = (args[4] == "\"\"") ? new List<string> { "mp4", "mkv", "avi" } : args[4].Split(",").ToList();
@@ -204,7 +206,7 @@ namespace HandbrakeCLI_daemon
                         if (!Directory.Exists(args[i])) throw new Exception($"Config references a directory which does not exist: {args[i]}");
                     }
                     if (!File.Exists(args[3])) throw new Exception($"Config references a filepath which does not exist: {args[3]}");
-                    var toAdd = new Watch(args[0], args[1], (args[2] == "\"\"") ? string.Empty : args[2], args[3], exts);
+                    var toAdd = new Watch(args[0], args[1], (args[2] == "\"\"") ? string.Empty : args[2], args[3], exts, (args.Length == 6)? bool.Parse(args[5]) : false);
                     temp.Add(toAdd);
                 }
             }

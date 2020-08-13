@@ -6,22 +6,17 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
+using System.Threading;
 
 namespace HandbrakeCLI_daemon
 {
+    
     class Daemon
     {
-        /// <summary>
-        /// reccursive filestructure
-        /// dynamic subtitles (folder)?
-        /// temp dir output
-        /// </summary>
-
         public static char Slash = Path.DirectorySeparatorChar;
 
         public static void Main(string[] args)
         {
-            //CreateHostBuilder(args).RunConsoleAsync();
             CreateHostBuilder(args).Build().Run();
         }
 
@@ -38,6 +33,7 @@ namespace HandbrakeCLI_daemon
                 .ConfigureServices((hostContext, services) =>
                 {
                     services.AddHostedService<QueueService>();
+                    //services.AddHostedService<TestService>();
                     services.AddSingleton<IHostedService, WatcherService>();
                 }).ConfigureLogging((hostingContext, logging) =>
                 {

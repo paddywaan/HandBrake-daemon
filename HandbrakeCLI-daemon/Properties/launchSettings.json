@@ -1,7 +1,8 @@
 {
   "profiles": {
     "HandbrakeCLI-daemon": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "start"
     }
   }
 }

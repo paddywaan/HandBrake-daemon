@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30204.135
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Handbrake-daemon", "HandbrakeCLI-daemon\Handbrake-daemon.csproj", "{364B5560-2C81-4D6D-B3F2-999FD52B69D8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Handbrake-daemon", "HandBrake-daemon\HandBrake-daemon.csproj", "{364B5560-2C81-4D6D-B3F2-999FD52B69D8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HandbrakeCLI-daemonUnitTest", "HandbrakeCLI-daemonUnitTest\HandbrakeCLI-daemonUnitTest.csproj", "{39E740D1-96E2-4167-AA42-279146341808}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HandbrakeCLI-daemonUnitTest", "HandBrake-daemonUnitTest\HandBrake-daemonUnitTest.csproj", "{39E740D1-96E2-4167-AA42-279146341808}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

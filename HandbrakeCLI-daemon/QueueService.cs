@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 
-namespace HandbrakeCLI_daemon
+namespace Handbrake_daemon
 {
     public class HBQueueItem
     {

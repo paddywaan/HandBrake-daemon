@@ -3,7 +3,8 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <RootNamespace>HandbrakeCLI_daemon</RootNamespace>
+    <RootNamespace>Handbrake_daemon</RootNamespace>
+    <AssemblyName>Handbrake-daemon</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\HandbrakeCLI-daemon\HandbrakeCLI-daemon.csproj" />
+    <ProjectReference Include="..\HandbrakeCLI-daemon\Handbrake-daemon.csproj" />
   </ItemGroup>
 
 </Project>

@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using System.Threading;
 
-namespace HandbrakeCLI_daemon
+namespace Handbrake_daemon
 {
     
     class Daemon

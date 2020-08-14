@@ -10,7 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace HandbrakeCLI_daemon
+namespace Handbrake_daemon
 {
     public class Watch : IComparable
     {
@@ -97,11 +97,11 @@ namespace HandbrakeCLI_daemon
 
         private void ScanDir(Watch watch, string scanPath)
         {
-            foreach (var dir in Directory.GetDirectories(scanPath))
+            foreach (var dir in Directory.GetDirectories(scanPath).OrderBy(x => x).ToArray())
             {
                 ScanDir(watch, dir);
             }
-            foreach (var file in Directory.GetFiles(scanPath))
+            foreach (var file in Directory.GetFiles(scanPath).OrderBy(x => x).ToArray())
             {
                 AddQueueItem(watch, file);
             }

@@ -91,12 +91,14 @@ namespace Handbrake_daemon
         private const int SleepDelay = 5000;
         private Process HBService;
         private static bool debug = false;
+        private IHostApplicationLifetime _appLifeTime;
 
-        public QueueService(ILogger<QueueService> logService)
+        public QueueService(ILogger<QueueService> logService, IHostApplicationLifetime appLifeTime)
         {
             logger = logService;
             HBQueue = new Queue<HBQueueItem>();
             Debug.Assert(debug = true);
+            _appLifeTime = appLifeTime;
             //Task.Run(() => { OnStart(); });
             Instance = this;
         }
@@ -120,90 +122,97 @@ namespace Handbrake_daemon
             logger.LogDebug($"Queue is now: " + QueueString);
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            _appLifeTime.ApplicationStopped.Register(Dispose);
+
+            return RunAsync(stoppingToken);
+        }
+
+        protected async Task RunAsync(CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
             {
                 //logger.LogDebug("Execute ran.");
-                if (HBQueue.Count > 0)
+                if (HBQueue.Count > 0 && (HBService==null || HBService.HasExited))
                 {
-                    //if (IsFileReady(HBQueue.Peek().FilePath))
-                    //{
-                    //logger.LogDebug($"File: {HBQueue.Peek().FilePath} is not locked. Processing...");
-                    var poppedQueue = HBQueue.Dequeue();
-
-                    logger.LogInformation($"Removed item from queue: {poppedQueue.FileName}");
-                    logger.LogDebug($"Queue is now: " + QueueString);
-                    var argsSB = new StringBuilder();
-                    var baseArgs = $"--preset-import-file \"{poppedQueue.WatchInstance.ProfilePath}\" -Z {poppedQueue.WatchInstance.ProfileName}" +
-                        $" -i \"{poppedQueue.FilePath}\"";
-                    argsSB.Append(baseArgs);
-                    var tup = GetSubs(poppedQueue.FilePath);
-                    if (tup.Item1.Count > 0)
+                    if (IsFileReady(HBQueue.Peek().FilePath))
                     {
-                        argsSB.Append(" --srt-file \"" + String.Join(",", tup.Item1) + "\"");
-                        argsSB.Append(" --srt-lang \"" + String.Join(",", tup.Item2) + "\"");
-                        argsSB.Append(" --all-subtitles");
-                    }
+                        logger.LogDebug($"File: {HBQueue.Peek().FilePath} is not locked. Processing...");
+                        var poppedQueue = HBQueue.Dequeue();
 
-                    string destDir = poppedQueue.WatchInstance.Destination; ;
-                    if (poppedQueue.WatchInstance.Show)
-                    {
-                        var DirName = new DirectoryInfo(Path.GetDirectoryName(poppedQueue.FilePath)).Name;
-                        var matchReg = new Regex(@"(.*?).(s|season)\ ?(\d{1,2})", RegexOptions.IgnoreCase);
-
-                        if (matchReg.IsMatch(DirName))
+                        //logger.LogInformation($"Removed item from queue: {poppedQueue.FileName}");
+                        logger.LogDebug($"Queue is now: " + QueueString);
+                        var argsSB = new StringBuilder();
+                        var baseArgs = $"--preset-import-file \"{poppedQueue.WatchInstance.ProfilePath}\" -Z {poppedQueue.WatchInstance.ProfileName}" +
+                            $" -i \"{poppedQueue.FilePath}\"";
+                        argsSB.Append(baseArgs);
+                        var tup = GetSubs(poppedQueue.FilePath);
+                        if (tup.Item1.Count > 0)
                         {
-                            destDir = poppedQueue.WatchInstance.Destination + Path.DirectorySeparatorChar + matchReg.Match(DirName).Groups[1]
-                                + Path.DirectorySeparatorChar + "Season " + matchReg.Match(DirName).Groups[3];
-                            Directory.CreateDirectory(destDir);
+                            argsSB.Append(" --srt-file \"" + String.Join(",", tup.Item1) + "\"");
+                            argsSB.Append(" --srt-lang \"" + String.Join(",", tup.Item2) + "\"");
+                            argsSB.Append(" --all-subtitles");
+                        }
+
+                        string destDir = poppedQueue.WatchInstance.Destination; ;
+                        if (poppedQueue.WatchInstance.Show)
+                        {
+                            var DirName = new DirectoryInfo(Path.GetDirectoryName(poppedQueue.FilePath)).Name;
+                            var matchReg = new Regex(@"(.*?).(s|season)\ ?(\d{1,2})", RegexOptions.IgnoreCase);
+
+                            if (matchReg.IsMatch(DirName))
+                            {
+                                destDir = poppedQueue.WatchInstance.Destination + Path.DirectorySeparatorChar + matchReg.Match(DirName).Groups[1]
+                                    + Path.DirectorySeparatorChar + "Season " + matchReg.Match(DirName).Groups[3];
+                                Directory.CreateDirectory(destDir);
+                            }
+                        }
+
+                        argsSB.Append($" -o \"{destDir + Daemon.Slash + poppedQueue.FileName}\"");
+
+
+                        logger.LogInformation($"Encoding {poppedQueue.FileName} using: {argsSB}");
+
+
+                        HBService = new Process
+                        {
+                            StartInfo = new ProcessStartInfo(HBProc, argsSB.ToString())
+                        };
+                        HBService.StartInfo.UseShellExecute = false;
+                        HBService.StartInfo.RedirectStandardOutput = false;
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) HBService.StartInfo.RedirectStandardError = true;
+                        //p.StandardOutput.
+                        HBService.StartInfo.CreateNoWindow = true;
+                        stoppingToken.Register(() => HBService.Kill());
+                        HBService.Start();
+                        //string output = p.StandardOutput.ReadToEnd();
+                        HBService.PriorityClass = ProcessPriorityClass.BelowNormal;
+                        //await p.WaitForExitAsync();
+                        //HBService.Dispose();
+                        try
+                        {
+                            logger.LogInformation("Encode completed.");
+                            if (!debug)
+                            {
+                                if (poppedQueue.WatchInstance.Origin == String.Empty) File.Delete(poppedQueue.FilePath);
+                                else File.Move(poppedQueue.FilePath, poppedQueue.WatchInstance.Origin);
+
+                            }
+                            //else logger.LogError($"Error encoding file: {p.StandardOutput.ReadToEnd()}");
+                        }
+                        catch (IOException)
+                        {
+                            logger.LogError($"Permission denied to move/delete the source file. Please make sure the service is run as the appropriate group/owner for the source directory: {poppedQueue.FilePath}");
                         }
                     }
-
-                    argsSB.Append($" -o \"{destDir + Daemon.Slash + poppedQueue.FileName}\"");
-
-
-                    logger.LogInformation($"Encoding {poppedQueue.FileName} using: {argsSB}");
-
-
-                    Process p = new Process
-                    {
-                        StartInfo = new ProcessStartInfo(HBProc, argsSB.ToString())
-                    };
-                    p.StartInfo.UseShellExecute = false;
-                    p.StartInfo.RedirectStandardOutput = false;
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) p.StartInfo.RedirectStandardError = true;
-                    //p.StandardOutput.
-                    p.StartInfo.CreateNoWindow = true;
-                    HBService = p;
-                    HBService.Start();
-                    //string output = p.StandardOutput.ReadToEnd();
-                    p.PriorityClass = ProcessPriorityClass.BelowNormal;
-                    await p.WaitForExitAsync();
-                    //HBService.Dispose();
-                    try
-                    {
-                        logger.LogInformation("Encode completed.");
-                        if (!debug)
-                        {
-                            if (poppedQueue.WatchInstance.Origin == String.Empty) File.Delete(poppedQueue.FilePath);
-                            else File.Move(poppedQueue.FilePath, poppedQueue.WatchInstance.Origin);
-
-                        }
-                        //else logger.LogError($"Error encoding file: {p.StandardOutput.ReadToEnd()}");
-                    }
-                    catch (IOException)
-                    {
-                        logger.LogError($"Permission denied to move/delete the source file. Please make sure the service is run as the appropriate group/owner for the source directory: {poppedQueue.FilePath}");
-                    }
-                    //}
-                    //else logger.LogWarning("File is locked.");
+                    else logger.LogWarning("File is locked.");
                 }
                 await Task.Delay(SleepDelay, stoppingToken);
             }
         }
 
-        private Tuple<List<string>,List<string>> GetSubs(string fPath)
+        public static Tuple<List<string>,List<string>> GetSubs(string fPath)
         {
             var tempsrtPATH = new List<string>();
             var tempLangs = new List<string>();
@@ -223,8 +232,12 @@ namespace Handbrake_daemon
                 {
                     if (Path.GetExtension(file).Equals(".srt"))
                     {
-                        tempsrtPATH.Add(file);
-                        tempLangs.Add(GetSubLang(file));
+                        var startsReg = new Regex(@"\d{1,2}_");
+                        if (file.Contains(Path.GetFileNameWithoutExtension(fPath), StringComparison.OrdinalIgnoreCase) || startsReg.IsMatch(file))
+                        {
+                            tempsrtPATH.Add(file);
+                            tempLangs.Add(GetSubLang(file));
+                        }
                     }
                 }
             }
@@ -258,13 +271,14 @@ namespace Handbrake_daemon
             }
         }
 
-        //public override void Dispose()
-        //{
-        //    base.Dispose();
-        //    if(HBService != null)
-        //        HBService.Dispose();
-        //}
-        
+        public override void Dispose()
+        {
+            if (HBService != null)
+            {
+                HBService.Dispose();
+            }
+            base.Dispose();
+        }
     }
 
 

@@ -39,6 +39,7 @@ namespace Handbrake_daemon
                 {
                     logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
                     logging.AddConsole();
-                });
+                })
+            ;
     }
 }

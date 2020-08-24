@@ -61,7 +61,7 @@ namespace HandbrakeCLI_daemonUnitTest
         public void TestGetSubsReturnsParsedInputs()
         {
             foreach (var file in Directory.GetFiles(asmDir + Path.DirectorySeparatorChar + "TestMedia"))
-                {
+            {
 
             }
 

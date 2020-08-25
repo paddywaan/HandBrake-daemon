@@ -1,4 +1,4 @@
-using Handbrake_daemon;
+using HandBrake_daemon;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;

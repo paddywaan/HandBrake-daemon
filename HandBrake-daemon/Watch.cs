@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,8 +8,10 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using IniParser;
+using System.Reflection;
 
-namespace Handbrake_daemon
+namespace HandBrake_daemon
 {
     public class Watch : IComparable
     {
@@ -19,9 +20,9 @@ namespace Handbrake_daemon
             this.Source = source ?? throw new ArgumentNullException(nameof(source));
             this.Destination = destination ?? throw new ArgumentNullException(nameof(destination));
             this.ProfilePath = profilePath ?? throw new ArgumentNullException(nameof(profilePath));
-            this.Extentions = extentions;
+            this.Extentions = extentions ?? new List<string>{ "mp4", "mkv", "avi" };
             this.Origin = origin;
-            this.Show = show;
+            this.IsShow = show;
         }
 
         public string Source { private set; get; }
@@ -29,7 +30,7 @@ namespace Handbrake_daemon
         public string Origin { private set; get; }
         public string ProfilePath { private set; get; }
         public List<string> Extentions { private set; get; }
-        public bool Show { private set; get; }
+        public bool IsShow { private set; get; }
         public string ProfileName
         {
             get
@@ -66,9 +67,13 @@ namespace Handbrake_daemon
             logger = loggingService;
             logger.LogInformation("Loading watchers");
             ConfPath = (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) ? "/etc/HandBrakeDaemon.conf" : "HandBrakeDaemon.conf";
-            if (!File.Exists(ConfPath)) File.WriteAllText(ConfPath, "#Use double quotes for filepaths with spaces. Providing a null value in the argument for `Origin` directory will delete the original file post-transcoding. Providing a directory will move the file instead." + Environment.NewLine + 
-                "#\"source\" \"destination\" \"origin\" \"profile  path\" ext1,ext2,ext3..." + Environment.NewLine +
-                "#/mnt/media/source /mnt/media/destination  \"\" /mnt/media/profile.json \"\"");
+            if (!File.Exists(ConfPath))
+            {
+                var defConf = Assembly.GetExecutingAssembly().GetManifestResourceStream("HandBrake_daemon.default.conf");
+                using var sr = new StreamReader(defConf);
+                File.WriteAllText(ConfPath, sr.ReadToEnd());
+                //File.Copy(Assembly.GetExecutingAssembly().GetManifestResourceStream("HandBrake_daemon.default.conf"), ConfPath);
+            }
             HostApp = hostApp;
             _QueueService = QueueService.Instance;
             LoadWatchlist();
@@ -162,7 +167,7 @@ namespace Handbrake_daemon
 
         private void LoadWatchlist()
         {
-            Watching = ReadConf(ConfPath) ?? new List<Watch>();
+            Watching = ReadConfd(ConfPath) ?? new List<Watch>();
             logger.LogInformation($"Loaded {Watching.Count} items to watchers.");
             foreach (var instance in Watching)
             {
@@ -190,6 +195,31 @@ namespace Handbrake_daemon
             }
             //throw new NotImplementedException();
         }
+
+        public static List<Watch>ReadConfd(string fPath)
+        {
+            //using StreamReader sr = new StreamReader(fPath);
+            List<Watch> tempWatchers = new List<Watch>();
+            FileIniDataParser parser = new FileIniDataParser();
+            var x = parser.ReadFile(fPath);
+            foreach(var section in x.Sections)
+            {
+                foreach(var key in section.Keys)
+                {
+                    if (key.Value == null && (key.KeyName != "origin" || key.KeyName != "isShow")) throw new Exception(
+                          $"Missing config parameter for: {section}:{key}");
+                }
+                
+                var tWatch = new Watch(section.Keys["source"], section.Keys["destination"], section.Keys["origin"], section.Keys["profilePath"], section.Keys["extentions"]?.Split(",").ToList(), Convert.ToBoolean(section.Keys["isShow"]));
+                if (!Directory.Exists(tWatch.Source)) throw new Exception($"Config references a directory which does not exist: {tWatch.Source}");
+                if (!Directory.Exists(tWatch.Destination)) throw new Exception($"Config references a directory which does not exist: {tWatch.Destination}");
+                if (!string.IsNullOrEmpty(tWatch.Origin) && !Directory.Exists(tWatch.Origin)) throw new Exception($"Config file references a directory which does not exist: {tWatch.Origin}");
+                if (!File.Exists(tWatch.ProfilePath)) throw new Exception($"Config references a file which does not exist: {tWatch.ProfilePath}");
+                tempWatchers.Add(tWatch);
+            }
+            return tempWatchers;
+        }
+
         public static List<Watch> ReadConf(string fPath)
         {
             using StreamReader sr = new StreamReader(fPath);
@@ -207,7 +237,7 @@ namespace Handbrake_daemon
                         if (!Directory.Exists(args[i])) throw new Exception($"Config references a directory which does not exist: {args[i]}");
                     }
                     if (!File.Exists(args[3])) throw new Exception($"Config references a filepath which does not exist: {args[3]}");
-                    var toAdd = new Watch(args[0], args[1], (args[2] == "\"\"") ? string.Empty : args[2], args[3], exts, (args.Length == 6)? bool.Parse(args[5]) : false);
+                    var toAdd = new Watch(args[0], args[1], (args[2] == "\"\"") ? string.Empty : args[2], args[3], exts, (args.Length == 6) && bool.Parse(args[5]));
                     temp.Add(toAdd);
                 }
             }

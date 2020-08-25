@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
 
-namespace Handbrake_daemon
+namespace HandBrake_daemon
 {
     public class HBQueueItem
     {
@@ -51,7 +51,7 @@ namespace Handbrake_daemon
 
     public class TestService : BackgroundService, IDisposable
     {
-        private ILogger<TestService> Logger;
+        private readonly ILogger<TestService> Logger;
         public TestService(ILogger<TestService> logger)
         {
             Logger = logger;
@@ -91,7 +91,7 @@ namespace Handbrake_daemon
         private const int SleepDelay = 5000;
         private Process HBService;
         private static bool debug = false;
-        private IHostApplicationLifetime _appLifeTime;
+        private readonly IHostApplicationLifetime _appLifeTime;
 
         public QueueService(ILogger<QueueService> logService, IHostApplicationLifetime appLifeTime)
         {
@@ -156,7 +156,7 @@ namespace Handbrake_daemon
                         }
 
                         string destDir = poppedQueue.WatchInstance.Destination; ;
-                        if (poppedQueue.WatchInstance.Show)
+                        if (poppedQueue.WatchInstance.IsShow)
                         {
                             var DirName = new DirectoryInfo(Path.GetDirectoryName(poppedQueue.FilePath)).Name;
                             var matchReg = new Regex(@"(.*?).(s|season)\ ?(\d{1,2})", RegexOptions.IgnoreCase);

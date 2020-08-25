@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Handbrake_daemon;
+using HandBrake_daemon;
 using NUnit.Framework;
 using System.IO;
 using NUnit.Framework.Internal;

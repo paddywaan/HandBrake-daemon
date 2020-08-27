@@ -220,7 +220,7 @@ namespace HandBrake_daemon
             return tempWatchers;
         }
 
-        public static List<Watch> ReadConf(string fPath)
+        /*public static List<Watch> ReadConf(string fPath)
         {
             using StreamReader sr = new StreamReader(fPath);
             string line;
@@ -243,6 +243,6 @@ namespace HandBrake_daemon
             }
             if (temp.Count == 0) return null;
             return temp;
-        }
+        }*/
     }
 }

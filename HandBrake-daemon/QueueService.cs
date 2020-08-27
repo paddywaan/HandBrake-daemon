@@ -147,7 +147,7 @@ namespace HandBrake_daemon
                         var baseArgs = $"--preset-import-file \"{poppedQueue.WatchInstance.ProfilePath}\" -Z {poppedQueue.WatchInstance.ProfileName}" +
                             $" -i \"{poppedQueue.FilePath}\"";
                         argsSB.Append(baseArgs);
-                        var tup = GetSubs(poppedQueue.FilePath);
+                        var tup = GetSubs(poppedQueue.FilePath, logger);
                         if (tup.Item1.Count > 0)
                         {
                             argsSB.Append(" --srt-file \"" + String.Join(",", tup.Item1) + "\"");
@@ -169,7 +169,7 @@ namespace HandBrake_daemon
                             }
                         }
 
-                        argsSB.Append($" -o \"{destDir + Daemon.Slash + poppedQueue.FileName}\"");
+                        argsSB.Append($" -o \"{destDir + Path.DirectorySeparatorChar + poppedQueue.FileName}\"");
 
 
                         logger.LogInformation($"Encoding {poppedQueue.FileName} using: {argsSB}");
@@ -212,11 +212,12 @@ namespace HandBrake_daemon
             }
         }
 
-        public static Tuple<List<string>,List<string>> GetSubs(string fPath)
+        public static Tuple<List<string>,List<string>> GetSubs(string fPath, ILogger logger = null)
         {
             var tempsrtPATH = new List<string>();
             var tempLangs = new List<string>();
             var mediaRoot = Path.GetDirectoryName(fPath);
+            if (!(logger is null)) logger.LogDebug($"GetSubs ran.");
             foreach (var file in Directory.GetFiles(mediaRoot))
             {
                 
@@ -230,27 +231,36 @@ namespace HandBrake_daemon
                         tempLangs.Add(GetSubLang(file));
                 }
             }
-            if (Directory.Exists(mediaRoot + Daemon.Slash + "subs"))
+
+            //We need to ignore invariants due to Directory.Exists ignoring on NTFS but not Ext4.
+            try
             {
-                foreach (var file in Directory.GetFiles(mediaRoot + Daemon.Slash + "subs"))
+                var SubDir = new DirectoryInfo(mediaRoot + Path.DirectorySeparatorChar).GetDirectories().First(x => x.Name.Equals("subs", StringComparison.OrdinalIgnoreCase)).Name;
+                //if (!(logger is null)) logger.LogDebug($"Ext: {SubDir}");
+                if (Directory.Exists(mediaRoot + Path.DirectorySeparatorChar + SubDir))
                 {
-                    if (Path.GetExtension(file).Equals(".srt"))
+                    foreach (var file in Directory.GetFiles(mediaRoot + Path.DirectorySeparatorChar + SubDir))
                     {
-                        Console.WriteLine($"Compared {Path.GetFileNameWithoutExtension(file)} contains?: {Path.GetFileNameWithoutExtension(fPath)} MediaRoot:{fPath}");
-                        var startsReg = new Regex(@"\d{1,2}_");
-                        if (Path.GetFileNameWithoutExtension(file).Equals(Path.GetFileNameWithoutExtension(fPath), StringComparison.OrdinalIgnoreCase))
+                        //if (!(logger is null)) logger.LogDebug($"Ext: {Path.GetExtension(file)}");
+                        if (Path.GetExtension(file).Equals(".srt"))
                         {
-                            tempsrtPATH.Add(file);
-                            tempLangs.Add("und");
-                        }
-                        else if (Path.GetFileNameWithoutExtension(file).Contains(Path.GetFileNameWithoutExtension(fPath), StringComparison.OrdinalIgnoreCase) || startsReg.IsMatch(file))
-                        {
-                            tempsrtPATH.Add(file);
-                            tempLangs.Add(GetSubLang(file));
+                            //if (!(logger is null)) logger.LogDebug($"Compared {Path.GetFileNameWithoutExtension(file)} contains?: {Path.GetFileNameWithoutExtension(fPath)} MediaRoot:{fPath}");
+                            var startsReg = new Regex(@"\d{1,2}_");
+                            if (Path.GetFileNameWithoutExtension(file).Equals(Path.GetFileNameWithoutExtension(fPath), StringComparison.OrdinalIgnoreCase))
+                            {
+                                tempsrtPATH.Add(file);
+                                tempLangs.Add("und");
+                            }
+                            else if (Path.GetFileNameWithoutExtension(file).Contains(Path.GetFileNameWithoutExtension(fPath), StringComparison.OrdinalIgnoreCase) || startsReg.IsMatch(file))
+                            {
+                                tempsrtPATH.Add(file);
+                                tempLangs.Add(GetSubLang(file));
+                            }
                         }
                     }
                 }
             }
+            catch (InvalidOperationException) { }
             return new Tuple<List<string>, List<string>>(tempsrtPATH, tempLangs);
         }
         public static string GetSubLang(string mediaSource)

@@ -75,8 +75,8 @@ namespace HandbrakeCLI_daemonUnitTest
         public void TestLangsForSRTNamesOnly()
         {
             FileCreate("testMedia.mp4");
-            FileCreate("subs\\2_English.srt");
-            FileCreate("subs\\3_French.srt");
+            FileCreate("Subs\\2_English.srt");
+            FileCreate("Subs\\3_French.srt");
             Assert.AreEqual("English", QueueService.GetSubs(testDir + "testMedia.mp4").Item2[0]);
             Assert.AreEqual("French", QueueService.GetSubs(testDir + "testMedia.mp4").Item2[1]);
         }
@@ -84,9 +84,9 @@ namespace HandbrakeCLI_daemonUnitTest
         public void TestIdentialNameInSubsDirectory()
         {
             FileCreate("testMediaOne.mp4");
-            FileCreate("subs\\testMediaOne.srt");
+            FileCreate("Subs\\testMediaOne.srt");
             FileCreate("testMediaTwo.mp4");
-            FileCreate("subs\\testMediaTwo.srt");
+            FileCreate("Subs\\testMediaTwo.srt");
             Assert.AreEqual("und", QueueService.GetSubs(testDir + "testMediaOne.mp4").Item2[0]);
             Assert.AreEqual(1, QueueService.GetSubs(testDir + "testMediaOne.mp4").Item2.Count);
             Assert.AreEqual("und", QueueService.GetSubs(testDir + "testMediaTwo.mp4").Item2[0]);

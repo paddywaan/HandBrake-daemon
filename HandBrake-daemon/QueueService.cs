@@ -193,7 +193,7 @@ namespace HandBrake_daemon
                         try
                         {
                             logger.LogInformation("Encode completed.");
-                            if (!debug)
+                            if (!debug && HBService.HasExited && HBService.ExitCode == 0)
                             {
                                 if (poppedQueue.WatchInstance.Origin == String.Empty) File.Delete(poppedQueue.FilePath);
                                 else File.Move(poppedQueue.FilePath, poppedQueue.WatchInstance.Origin);
@@ -219,11 +219,15 @@ namespace HandBrake_daemon
             var mediaRoot = Path.GetDirectoryName(fPath);
             foreach (var file in Directory.GetFiles(mediaRoot))
             {
-                if (Path.GetExtension(file).Equals(".srt") && Path.GetFileNameWithoutExtension(mediaRoot)
-                    .Contains(Path.GetFileNameWithoutExtension(fPath)))
+                
+                if (Path.GetExtension(file).Equals(".srt") && Path.GetFileNameWithoutExtension(file).Contains(Path.GetFileNameWithoutExtension(fPath), StringComparison.OrdinalIgnoreCase))
                 {
+                    //Console.WriteLine($"Compared {Path.GetFileNameWithoutExtension(file)} contains?: {Path.GetFileNameWithoutExtension(fPath)} MediaRoot:{fPath}");
                     tempsrtPATH.Add(file);
-                    tempLangs.Add(GetSubLang(file));
+                    if (Path.GetFileNameWithoutExtension(file).Equals(Path.GetFileNameWithoutExtension(fPath), StringComparison.OrdinalIgnoreCase))
+                        tempLangs.Add("und");
+                    else
+                        tempLangs.Add(GetSubLang(file));
                 }
             }
             if (Directory.Exists(mediaRoot + Daemon.Slash + "subs"))
@@ -232,8 +236,14 @@ namespace HandBrake_daemon
                 {
                     if (Path.GetExtension(file).Equals(".srt"))
                     {
+                        Console.WriteLine($"Compared {Path.GetFileNameWithoutExtension(file)} contains?: {Path.GetFileNameWithoutExtension(fPath)} MediaRoot:{fPath}");
                         var startsReg = new Regex(@"\d{1,2}_");
-                        if (file.Contains(Path.GetFileNameWithoutExtension(fPath), StringComparison.OrdinalIgnoreCase) || startsReg.IsMatch(file))
+                        if (Path.GetFileNameWithoutExtension(file).Equals(Path.GetFileNameWithoutExtension(fPath), StringComparison.OrdinalIgnoreCase))
+                        {
+                            tempsrtPATH.Add(file);
+                            tempLangs.Add("und");
+                        }
+                        else if (Path.GetFileNameWithoutExtension(file).Contains(Path.GetFileNameWithoutExtension(fPath), StringComparison.OrdinalIgnoreCase) || startsReg.IsMatch(file))
                         {
                             tempsrtPATH.Add(file);
                             tempLangs.Add(GetSubLang(file));

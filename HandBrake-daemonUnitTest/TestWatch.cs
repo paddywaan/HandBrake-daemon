@@ -10,9 +10,9 @@ namespace HandbrakeCLI_daemonUnitTest
 {
     class TestWatch
     {
-        private List<string> validPaths;
-        private List<string> invalidPaths;
-        private const string fPath = "testdb.conf";
-        private const string exts = "mp4,mkv,avi";
+        //private List<string> validPaths;
+        //private List<string> invalidPaths;
+        //private const string fPath = "testdb.conf";
+        //private const string exts = "mp4,mkv,avi";
     }
 }

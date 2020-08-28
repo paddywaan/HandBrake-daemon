@@ -9,8 +9,6 @@ namespace HandBrake_daemon
     
     class Daemon
     {
-        public static char Slash = Path.DirectorySeparatorChar;
-
         public static void Main(string[] args)
         {
             CreateHostBuilder(args).Build().Run();
@@ -29,13 +27,11 @@ namespace HandBrake_daemon
                 .ConfigureServices((hostContext, services) =>
                 {
                     services.AddHostedService<QueueService>();
-                    //services.AddHostedService<TestService>();
                     services.AddSingleton<IHostedService, WatcherService>();
                 }).ConfigureLogging((hostingContext, logging) =>
                 {
                     logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
                     logging.AddConsole();
-                })
-            ;
+                });
     }
 }

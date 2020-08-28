@@ -42,5 +42,8 @@
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </None>
   </ItemGroup>
+	<Target Name="RunCustomScript" AfterTargets="GatherAllFilesToPublish">
+		<Exec Command="echo Published" />
+	</Target>
 
 </Project>

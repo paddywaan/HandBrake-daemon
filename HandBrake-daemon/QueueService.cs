@@ -125,7 +125,6 @@ namespace HandBrake_daemon
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _appLifeTime.ApplicationStopped.Register(Dispose);
-
             return RunAsync(stoppingToken);
         }
 
@@ -133,7 +132,6 @@ namespace HandBrake_daemon
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                //logger.LogDebug("Execute ran.");
                 if (HBQueue.Count > 0 && (HBService==null || HBService.HasExited))
                 {
                     if (IsFileReady(HBQueue.Peek().FilePath))
@@ -182,17 +180,16 @@ namespace HandBrake_daemon
                         HBService.StartInfo.UseShellExecute = false;
                         HBService.StartInfo.RedirectStandardOutput = false;
                         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) HBService.StartInfo.RedirectStandardError = true;
-                        //p.StandardOutput.
                         HBService.StartInfo.CreateNoWindow = true;
                         stoppingToken.Register(() => HBService.Kill());
-                        HBService.Exited += (sender, e) => HBService_Exited(sender, e, poppedQueue);
+                        HBService.EnableRaisingEvents = true;
+                        HBService.Exited += new EventHandler((sender, e) => HBService_Exited(sender, e, poppedQueue)); //prevents continuation?
+                        logger.LogDebug($"Starting HBCLI");
                         HBService.Start();
-                        //string output = p.StandardOutput.ReadToEnd();
+                        logger.LogDebug($"HBCLI Started: {HBService.StartTime}");
                         HBService.PriorityClass = ProcessPriorityClass.BelowNormal;
-                        //await p.WaitForExitAsync();
-                        //HBService.Dispose();
                     }
-                    else logger.LogWarning("File is locked.");
+                    else logger.LogWarning($"File {HBQueue.Peek().FilePath} is locked");
                 }
                 await Task.Delay(SleepDelay, stoppingToken);
             }
@@ -200,26 +197,14 @@ namespace HandBrake_daemon
 
         private void HBService_Exited(object sender, EventArgs e, HBQueueItem poppedQueue)
         {
-            try
+            logger.LogInformation("Encode completed.");
+            if (!debug)
             {
-                logger.LogInformation("Encode completed.");
-                if (!debug)
-                {
-                    if (poppedQueue.WatchInstance.Origin == String.Empty) File.Delete(poppedQueue.FilePath);
-                    else File.Move(poppedQueue.FilePath, poppedQueue.WatchInstance.Origin);
-
-                }
-                //else logger.LogError($"Error encoding file: {p.StandardOutput.ReadToEnd()}");
+                logger.LogDebug($"Origin: {poppedQueue.WatchInstance.Origin}, FilePath: {poppedQueue.FilePath}");
+                if (String.IsNullOrEmpty(poppedQueue.WatchInstance.Origin)) File.Delete(poppedQueue.FilePath);
+                else File.Move(poppedQueue.FilePath, poppedQueue.WatchInstance.Origin);
+                logger.LogDebug("Original file has been moved/deleted.");
             }
-            catch (IOException)
-            {
-                logger.LogError($"Permission denied to move/delete the source file. Please make sure the service is run as the appropriate group/owner for the source directory: {poppedQueue.FilePath}");
-            }
-        }
-
-        private void HBService_Exited(object sender, EventArgs e)
-        {
-            throw new NotImplementedException();
         }
 
         public static Tuple<List<string>,List<string>> GetSubs(string fPath, ILogger logger = null)
@@ -227,7 +212,7 @@ namespace HandBrake_daemon
             var tempsrtPATH = new List<string>();
             var tempLangs = new List<string>();
             var mediaRoot = Path.GetDirectoryName(fPath);
-            if (!(logger is null)) logger.LogDebug($"GetSubs ran.");
+            //if (!(logger is null)) logger.LogDebug($"GetSubs ran.");
             foreach (var file in Directory.GetFiles(mediaRoot))
             {
                 

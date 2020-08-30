@@ -13,18 +13,8 @@
 	<Description>A directory watcher daemon for HandBrake-CLI</Description>
 	<RepositoryUrl>https://github.com/paddywaan/HandBrake-daemon</RepositoryUrl>
 	<RepositoryType>git</RepositoryType>
+	<PackageProjectUrl>https://github.com/paddywaan/HandBrake-daemon</PackageProjectUrl>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Remove="default.conf" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="default.conf">
-		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	    <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-    </EmbeddedResource>
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="ini-parser-netstandard" Version="2.5.2" />
@@ -38,12 +28,20 @@
 
   <ItemGroup>
     <None Update="appsettings.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </None>
+    <None Update="handbrake-daemon.service">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </None>
+	<None Update="default.conf">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+	</None>
+	<None Update="install.sh">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+	</None>
   </ItemGroup>
-	<Target Name="RunCustomScript" AfterTargets="GatherAllFilesToPublish">
-		<Exec Command="echo Published" />
-	</Target>
-
 </Project>

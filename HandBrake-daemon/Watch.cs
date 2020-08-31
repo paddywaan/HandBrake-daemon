@@ -83,11 +83,11 @@ namespace HandBrake_daemon
         private void AddQueueItem(Watch watch, string filePath)
         {
             //is directory?
-            logger.LogInformation($"{string.Join(",", watch.Extentions)} vs FileExt: {Path.GetExtension(filePath).Replace(".", string.Empty)}");
+            //logger.LogDebug($"{string.Join(",", watch.Extentions)} vs FileExt: {Path.GetExtension(filePath).Replace(".", string.Empty)}");
             if (watch.Extentions.Contains(Path.GetExtension(filePath).Replace(".",string.Empty)))
             {
-                _QueueService.Add(new HBQueueItem(watch, filePath, Path.GetFileName(filePath)));
                 logger.LogInformation($"SCANNER=> Media found: {filePath}");
+                _QueueService.Add(new HBQueueItem(watch, filePath, Path.GetFileName(filePath)));
             }
             else logger.LogDebug($"Scanner=> Skipping: {filePath}");
         }

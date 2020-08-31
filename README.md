@@ -1,10 +1,20 @@
 ﻿# HandBrake-daemon
 
-HandBrake-daemon is a cross platform(Windows, Linux) directory watcher service for HandBrakeCLI. Multiple watchers can be specified, which will queue and process media in alphanumerical/date added ordering.
-Subtitles are automatically embedded into the output container, and nested directories can be automatically created for shows/episodic content.
+HandBrake-daemon is a cross platform (Windows, Linux) directory watcher service for HandBrakeCLI. Multiple watchers can be specified, which will queue and process media.
 
 I am not a profressional and this is my first attempt at maintaining a project, writing a service, and writing software for Linux, however I will do my best to resolve issues when they are reported. PR's, suggestions and comments are welcome.
 
+
+### Changelog
+
+**v1.0.0** - Release.
+* Watch configurations can be added via the config file.
+* Supports multiple watches.
+* Watches support a `source`, `destination`, and `origin` settings.
+* Watches can be individually configured to use different HandBrake encoding profiles via the `profilePath` setting.
+* Watches can be configured to nest the output media inside of a nested, episode directory structure. i.e. `/DestinationDirectory/TitleName/Season 1/output.mp4`
+* Watcher service scans the watched directories on start, and continues to watch the locations for new, and removed files.
+* Subtitles matching the source name (and/or extending the name with a language, or contained within a subdirectory named `subs`), will be embedded inside the output media.
 
 ### Prerequisites
 [HandBrake-CLI](https://handbrake.fr/downloads2.php) must be added to $PATH: [Linux](https://opensource.com/article/17/6/set-path-linux), [Windows 10](https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/).
@@ -23,15 +33,15 @@ After you have configured the systemd unit, please reload the daemon with: `sudo
 #### Windows Installation
 [Download]() and extract the zip to the desired location, then open cmd as Adminstrator:
 
-    sc.exe create HandBrake-daemon binPath="PATHTOEXECUTABLE"
+    sc.exe create HandBrake-daemon binPath= "PATHTOEXECUTABLE" DisplayName= "HandBrake-daemon" start= auto
 
 ### Configuration
 Linux platforms store the configuration in /etc/HandBrake-daemon.conf
 Windows platforms store the configuration in the installation/extracted directory.
 
-At least a single watcher must be defined in order for the service to run.
+**At least a single watcher must be defined in order for the service to run.**
 
-The source directory is used as the directory to watch for new media to process, and will be placed inside the destination directory upon completion.
+The source directory is used as the directory to watch for new media to process, and upon completion the output will be placed inside the destination directory.
 If an origin directory is specified, the source file will be moved to the Original Medial directory.
 If none is specified, the source will be deleted rather than moved.
 
@@ -42,3 +52,10 @@ Windows: `sc start HandBrake-daemon`
 Linux: `sudo systemctl start handbrake-daemon.service`
 
 When you are happy with the configuration, you can enable the daemon on boot via: `sudo systemctl enable handbrake-daemon.service`
+
+### Logging
+
+Logging verbosity can be changed via setting the default level in appsettings.json: `Debug, Information, Warning, Error, Critical`. By default, the level is set to Information.
+
+Linux: Logs are stored in `/var/log/HandnBrake-daemon.log` and `/var/log/HandnBrake-daemon.error.log`
+

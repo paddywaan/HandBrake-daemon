@@ -112,7 +112,7 @@ namespace HandBrake_daemon
             if (HBQueue.Where(x => x.FilePath == item.FilePath).ToList().Count > 0) throw new Exception(
                 $"QueueItem already exists: {item.FilePath}");
             HBQueue.Enqueue(item);
-            logger.LogInformation($"Enqueued new item: {item.FileName}");
+            logger.LogInformation($"QUEUE=> Added: {item.FileName}");
             logger.LogDebug($"Queue is now: " + QueueString);
         }
         public void Remove(string fPath)
@@ -140,7 +140,7 @@ namespace HandBrake_daemon
                         var poppedQueue = HBQueue.Dequeue();
 
                         //logger.LogInformation($"Removed item from queue: {poppedQueue.FileName}");
-                        logger.LogDebug($"Queue is now: " + QueueString);
+                        //logger.LogDebug($"Queue is now: " + QueueString);
                         var argsSB = new StringBuilder();
                         var baseArgs = $"--preset-import-file \"{poppedQueue.WatchInstance.ProfilePath}\" -Z {poppedQueue.WatchInstance.ProfileName}" +
                             $" -i \"{poppedQueue.FilePath}\"";
@@ -170,8 +170,8 @@ namespace HandBrake_daemon
                         argsSB.Append($" -o \"{destDir + Path.DirectorySeparatorChar + poppedQueue.FileName}\"");
 
 
-                        logger.LogInformation($"Encoding {poppedQueue.FileName} using: {argsSB}");
-
+                        logger.LogInformation($"Encoding {poppedQueue.FileName}");
+                        logger.LogDebug($"Used Args: {argsSB}");
 
                         HBService = new Process
                         {

@@ -4,7 +4,7 @@ HandBrake-daemon is a cross platform (Windows, Linux) directory watcher service 
 
 I am not a profressional and this is my first attempt at maintaining a project, writing a service, and writing software for Linux, however I will do my best to resolve issues when they are reported. PR's, suggestions and comments are welcome.
 
-
+***
 ### Changelog
 
 **v1.0.0** - Release.
@@ -15,7 +15,7 @@ I am not a profressional and this is my first attempt at maintaining a project, 
 * Watches can be configured to nest the output media inside of a nested, episode directory structure. i.e. `/DestinationDirectory/TitleName/Season 1/output.mp4`
 * Watcher service scans the watched directories on start, and continues to watch the locations for new, and removed files.
 * Subtitles matching the source name (and/or extending the name with a language, or contained within a subdirectory named `subs`), will be embedded inside the output media.
-
+***
 ### Prerequisites
 [HandBrake-CLI](https://handbrake.fr/downloads2.php) must be added to $PATH (Windows platforms require handbrake to be added under system rather than user level encironment variables): [Linux](https://opensource.com/article/17/6/set-path-linux), [Windows 10](https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/).
 
@@ -25,16 +25,14 @@ Afterwards, you must either restart (windows) or `source ~/.*rc`, depending on w
 #### Linux Installation
 [Download]() the zip and extract, then run the install.sh after verifying its contents. The install script will move the necessary config files to their appropriate locations.
 
-Please double check that /etc/systemd/system/handbrake-daemon.service is to your liking. You probably want to set the `WorkingDirectory`, `User`, and `Group` for the service to match your filesystem.
+Please double check that `/etc/systemd/system/handbrake-daemon.service` is to your liking. You probably want to set the `WorkingDirectory`, `User`, and `Group` for the service to match your filesystem.
 If you have multiple, different locations under different users, please add them to a group which the service daemon runs under.
 
 After you have configured the systemd unit, please reload the daemon with: `sudo systemctl daemon-reload` and proceed with configuration.
 
 #### Windows Installation
-[Download]() and extract the zip to the desired location, then open cmd as Adminstrator:
-
-    sc.exe create HandBrake-daemon binPath= "PATHTOEXECUTABLE" DisplayName= "HandBrake-daemon" start= auto
-
+[Download]() and extract the zip to the desired location, then run install.cmd as administrator to register the binary as a system service.
+***
 ### Configuration
 Linux platforms store the configuration in /etc/HandBrake-daemon.conf
 Windows platforms store the configuration in the installation/extracted directory.
@@ -42,8 +40,11 @@ Windows platforms store the configuration in the installation/extracted director
 **At least a single watcher must be defined in order for the service to run.**
 
 The source directory is used as the directory to watch for new media to process, and upon completion the output will be placed inside the destination directory.
-If an origin directory is specified, the source file will be moved to the Original Medial directory.
+If an *origin* directory is specified, the source file will be moved to the *Origin*al Media directory.
 If none is specified, the source will be deleted rather than moved.
+Watchers will only queue file extentions which are defined in the watch config.
+Transcode settings are taken from the profile .json, which can be created when running HandBrake's UI on a desktop platform, for ease of configuration.
+The *isShow* boolean can be set to true in order to nest the output media inside subdirectories to aid organisation of seasonal content.
 
 Finally, you may start the service for the first time:
 
@@ -52,7 +53,7 @@ Windows: `sc start HandBrake-daemon`
 Linux: `sudo systemctl start handbrake-daemon.service`
 
 When you are happy with the configuration, you can enable the daemon on boot via: `sudo systemctl enable handbrake-daemon.service`
-
+***
 ### Logging
 
 **Linux:** Logging verbosity can be changed via setting the *default* level in appsettings.json: `Debug, Information, Warning, Error, Critical`. By default, the level is set to Information, and the *.json* is stored alongside the binary in `/usr/local/bin/` unless an alternative *WorkingDirectory* is specified inside the `.service` unit. The logs are stored at `/var/log/HandnBrake-daemon.log` by default, and an updated progress% on the current encode can be seen via: `tail -f /var/log/HandnBrake-daemon.log`.

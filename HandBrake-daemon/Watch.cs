@@ -66,7 +66,8 @@ namespace HandBrake_daemon
         {
             logger = loggingService;
             logger.LogInformation("Loading watchers");
-            ConfPath = (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) ? "/etc/HandBrakeDaemon.conf" : "HandBrakeDaemon.conf";
+            //logger.LogDebug($"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + Path.DirectorySeparatorChar + "HandBrakeDaemon.conf"}");
+            ConfPath = (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) ? "/etc/HandBrakeDaemon.conf" : Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + Path.DirectorySeparatorChar + "HandBrakeDaemon.conf";
             if (!File.Exists(ConfPath))
             {
                 var defConf = Assembly.GetExecutingAssembly().GetManifestResourceStream("HandBrake_daemon.default.conf");

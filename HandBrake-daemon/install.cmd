@@ -1,0 +1,1 @@
+sc.exe create HandBrake-daemon binPath= "%~dp0HandBrake-daemon.exe" DisplayName= "HandBrake-daemon" start= auto

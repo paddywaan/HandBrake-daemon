@@ -17,7 +17,7 @@ I am not a profressional and this is my first attempt at maintaining a project, 
 * Subtitles matching the source name (and/or extending the name with a language, or contained within a subdirectory named `subs`), will be embedded inside the output media.
 
 ### Prerequisites
-[HandBrake-CLI](https://handbrake.fr/downloads2.php) must be added to $PATH: [Linux](https://opensource.com/article/17/6/set-path-linux), [Windows 10](https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/).
+[HandBrake-CLI](https://handbrake.fr/downloads2.php) must be added to $PATH (Windows platforms require handbrake to be added under system rather than user level encironment variables): [Linux](https://opensource.com/article/17/6/set-path-linux), [Windows 10](https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/).
 
 Afterwards, you must either restart (windows) or `source ~/.*rc`, depending on which shell you use.
 
@@ -55,7 +55,8 @@ When you are happy with the configuration, you can enable the daemon on boot via
 
 ### Logging
 
-Logging verbosity can be changed via setting the default level in appsettings.json: `Debug, Information, Warning, Error, Critical`. By default, the level is set to Information.
+**Linux:** Logging verbosity can be changed via setting the *default* level in appsettings.json: `Debug, Information, Warning, Error, Critical`. By default, the level is set to Information, and the *.json* is stored alongside the binary in `/usr/local/bin/` unless an alternative *WorkingDirectory* is specified inside the `.service` unit. The logs are stored at `/var/log/HandnBrake-daemon.log` by default, and an updated progress% on the current encode can be seen via: `tail -f /var/log/HandnBrake-daemon.log`.
 
-Linux: Logs are stored in `/var/log/HandnBrake-daemon.log` and `/var/log/HandnBrake-daemon.error.log`
+**Windows:** Logging verbosity can be changed via setting the default level for the `EventLog` section in appsettings.json: `Debug, Information, Warning, Error, Critical`. By default the level is set to Information, and the logs are stored inside EventViewer: *Application*, under the source: *HandBrake-daemon*
+
 

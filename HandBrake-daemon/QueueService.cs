@@ -130,6 +130,7 @@ namespace HandBrake_daemon
 
         protected async Task RunAsync(CancellationToken stoppingToken)
         {
+            //if (!File.Exists(HBProc)) throw new FileNotFoundException($"HandBrakeCLI could not be found in location: {HBProc}");
             while (!stoppingToken.IsCancellationRequested)
             {
                 if (HBQueue.Count > 0 && (HBService==null || HBService.HasExited))
@@ -145,7 +146,7 @@ namespace HandBrake_daemon
                         var baseArgs = $"--preset-import-file \"{poppedQueue.WatchInstance.ProfilePath}\" -Z {poppedQueue.WatchInstance.ProfileName}" +
                             $" -i \"{poppedQueue.FilePath}\"";
                         argsSB.Append(baseArgs);
-                        var tup = GetSubs(poppedQueue.FilePath, logger);
+                        var tup = GetSubs(poppedQueue.FilePath);
                         if (tup.Item1.Count > 0)
                         {
                             argsSB.Append(" --srt-file \"" + String.Join(",", tup.Item1) + "\"");
@@ -181,7 +182,7 @@ namespace HandBrake_daemon
                         HBService.StartInfo.RedirectStandardOutput = false;
                         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) HBService.StartInfo.RedirectStandardError = true;
                         HBService.StartInfo.CreateNoWindow = true;
-                        stoppingToken.Register(() => HBService.Kill());
+                        stoppingToken.Register(() => HBService?.Kill()); //Errors here are likely due to HandBrakeCLI exec not being found/started.
                         HBService.EnableRaisingEvents = true;
                         HBService.Exited += new EventHandler((sender, e) => HBService_Exited(sender, e, poppedQueue)); //prevents continuation?
                         logger.LogDebug($"Starting HBCLI");
@@ -207,15 +208,13 @@ namespace HandBrake_daemon
             }
         }
 
-        public static Tuple<List<string>,List<string>> GetSubs(string fPath, ILogger logger = null)
+        public static Tuple<List<string>,List<string>> GetSubs(string fPath)
         {
             var tempsrtPATH = new List<string>();
             var tempLangs = new List<string>();
             var mediaRoot = Path.GetDirectoryName(fPath);
-            //if (!(logger is null)) logger.LogDebug($"GetSubs ran.");
             foreach (var file in Directory.GetFiles(mediaRoot))
             {
-                
                 if (Path.GetExtension(file).Equals(".srt") && Path.GetFileNameWithoutExtension(file).Contains(Path.GetFileNameWithoutExtension(fPath), StringComparison.OrdinalIgnoreCase))
                 {
                     //Console.WriteLine($"Compared {Path.GetFileNameWithoutExtension(file)} contains?: {Path.GetFileNameWithoutExtension(fPath)} MediaRoot:{fPath}");

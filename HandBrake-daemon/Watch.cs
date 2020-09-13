@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using IniParser;
 using System.Reflection;
+using Microsoft.Extensions.Options;
 
 namespace HandBrake_daemon
 {
@@ -37,21 +38,18 @@ namespace HandBrake_daemon
                 return Path.GetFileName(ProfilePath).Replace(".json",String.Empty);
             }
         }
-
         public int CompareTo(object obj)
         {
             var watch = obj as Watch;
             return (watch.Source.CompareTo(this.Source) == 0) ? watch.Destination.CompareTo(this.Destination) : watch.Source.CompareTo(this.Source);
         }
     }
-
     public interface IWatcherService
     {
         public void ToggleWatchers(bool? state = null);
         //public void AddWatch(string source, string destination, string postDeletion, string profile, List<string> ext = null);
         public void RemoveWatch(Watch watch);
     }
-
     public class WatcherService : IWatcherService, IHostedService, IDisposable
     {
         private List<Watch> Watching = new List<Watch>();
@@ -60,12 +58,12 @@ namespace HandBrake_daemon
         private readonly QueueService _QueueService;
         private static string ConfPath;
         private static IHostApplicationLifetime HostApp;
-
+        private const string CONFNAME = "handbrake-daemon.conf";
         public WatcherService(ILogger<WatcherService> loggingService, IHostApplicationLifetime hostApp /* IServiceProvider _provider*/)
         {
             logger = loggingService;
             logger.LogInformation("Loading watchers");
-            ConfPath = (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) ? "/etc/HandBrakeDaemon.conf" : Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + Path.DirectorySeparatorChar + "HandBrakeDaemon.conf";
+            ConfPath = (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) ? "/etc/"+ CONFNAME : Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + Path.DirectorySeparatorChar + CONFNAME;
             if (!File.Exists(ConfPath))
             {
                 var defConf = Assembly.GetExecutingAssembly().GetManifestResourceStream("HandBrake_daemon.default.conf");
@@ -77,7 +75,6 @@ namespace HandBrake_daemon
             LoadWatchlist();
             ScanWatchDirs();
         }
-
         private void AddQueueItem(Watch watch, string filePath)
         {
             if (watch.Extentions.Contains(Path.GetExtension(filePath).Replace(".",string.Empty)))
@@ -87,7 +84,6 @@ namespace HandBrake_daemon
             }
             else logger.LogDebug($"Scanner=> Skipping: {filePath}");
         }
-
         private void ScanWatchDirs()
         {
             foreach(var watch in Watching)
@@ -95,7 +91,6 @@ namespace HandBrake_daemon
                 ScanDir(watch, watch.Source);
             }
         }
-
         private void ScanDir(Watch watch, string scanPath)
         {
             foreach (var dir in Directory.GetDirectories(scanPath).OrderBy(x => x).ToArray())
@@ -107,7 +102,6 @@ namespace HandBrake_daemon
                 AddQueueItem(watch, file);
             }
         }
-
         FileSystemWatcher CreateWatcher(Watch instance)
         {
             FileSystemWatcher watcher = new FileSystemWatcher(instance.Source)
@@ -119,7 +113,6 @@ namespace HandBrake_daemon
             watcher.Deleted += (sender, e) => Watcher_FileDeleted(sender, e);
             return watcher;
         }
-
         public void ToggleWatchers(bool? state = null)
         {
             if (Watchers.Count == 0)
@@ -132,7 +125,6 @@ namespace HandBrake_daemon
                  watcher.EnableRaisingEvents = state ?? !watcher.EnableRaisingEvents;
             }
         }
-
         public void RemoveWatch(Watch watch)
         {
             if (Watching.Contains(watch))
@@ -140,13 +132,11 @@ namespace HandBrake_daemon
                 Watching.Remove(watch);
             }
         }
-
         private void Watcher_FileDeleted(object _, FileSystemEventArgs e)
         {
             logger.LogInformation($"WATCHER=> File deleted: {e.FullPath}");
             _QueueService.Remove(e.FullPath);
         }
-
         private void Watcher_FileCreated(object _, FileSystemEventArgs e, Watch instance)
         {
             logger.LogDebug($"{ e.FullPath} Detected FileCreated");
@@ -159,7 +149,6 @@ namespace HandBrake_daemon
                 AddQueueItem(instance, e.FullPath);
             }
         }
-
         private void LoadWatchlist()
         {
             Watching = ReadConfd(ConfPath) ?? new List<Watch>();
@@ -169,19 +158,16 @@ namespace HandBrake_daemon
                 Watchers.Add(CreateWatcher(instance));
             }
         }
-
         public Task StartAsync(CancellationToken cancellationToken)
         {
             ToggleWatchers();
             return Task.CompletedTask;
         }
-
         public Task StopAsync(CancellationToken cancellationToken)
         {
             ToggleWatchers();
             return Task.CompletedTask;
         }
-
         public void Dispose()
         {
             foreach(var watch in Watchers)
@@ -189,7 +175,6 @@ namespace HandBrake_daemon
                 watch.Dispose();
             }
         }
-
         public static List<Watch>ReadConfd(string fPath)
         {
             List<Watch> tempWatchers = new List<Watch>();

@@ -47,7 +47,7 @@ namespace HandBrake_daemon
                         {
                             SourceName = SERVICENAME,
                             LogName = SERVICENAME + ".log",
-                        }).SetMinimumLevel(LogLevel.Debug);
+                        });
                     }
                 });
     }

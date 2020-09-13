@@ -67,13 +67,19 @@ namespace HandBrake_daemon
             logger.LogInformation($"Removed item from queue: {Path.GetFileName(fPath)}");
             logger.LogDebug($"Queue is now: " + QueueString);
         }
-
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _appLifeTime.ApplicationStopped.Register(Dispose);
             return RunAsync(stoppingToken);
         }
-
+        public override void Dispose()
+        {
+            if (HBService != null)
+            {
+                HBService.Dispose();
+            }
+            base.Dispose();
+        }
         protected async Task RunAsync(CancellationToken stoppingToken)
         {
             while (!stoppingToken.IsCancellationRequested)
@@ -117,7 +123,7 @@ namespace HandBrake_daemon
 
                         //Set up the process
                         logger.LogInformation($"Encoding {poppedQueue.FileName}");
-                        logger.LogDebug($"Used Args: {argsSB}");
+                        logger.LogDebug($"Encoding using args: {argsSB}");
                         HBService = new Process
                         {
                             StartInfo = new ProcessStartInfo(HBProc, argsSB.ToString())
@@ -126,11 +132,11 @@ namespace HandBrake_daemon
                         HBService.StartInfo.RedirectStandardOutput = false;
                         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) HBService.StartInfo.RedirectStandardError = true; //if we redirect standard error we can capture progress output.
                         HBService.StartInfo.CreateNoWindow = true;
-                        stoppingToken.Register(() => HBService?.Kill()); //Errors here are likely due to HandBrakeCLI exec not being found/started.
+                        stoppingToken.Register(() => HBService?.Kill()); //"No process is associated with this object" errors here are likely due to HandBrakeCLI exec not being found/started.
                         HBService.EnableRaisingEvents = true; //Allows our stopping token to interrupt the transcode
                         HBService.Exited += new EventHandler((sender, e) => HBService_Exited(sender, e, poppedQueue));
-                        logger.LogDebug($"Starting HBCLI @ {HBService.StartTime}");
                         HBService.Start();
+                        logger.LogDebug($"Started HBCLI @ {HBService.StartTime}");
                         HBService.PriorityClass = ProcessPriorityClass.BelowNormal;
                     }
                     else logger.LogWarning($"File {HBQueue.Peek().FilePath} is locked"); //Wait until the file is not busy
@@ -245,15 +251,6 @@ namespace HandBrake_daemon
                 return inputStream.Length > 0;
             }
             catch (Exception) { return false; }
-        }
-
-        public override void Dispose()
-        {
-            if (HBService != null)
-            {
-                HBService.Dispose();
-            }
-            base.Dispose();
         }
     }
 }

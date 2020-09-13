@@ -12,12 +12,12 @@ I am not a profressional and this is my first attempt at maintaining a project, 
 * Supports multiple watches.
 * Watches support a `source`, `destination`, and `origin` settings.
 * Watches can be individually configured to use different HandBrake encoding profiles via the `profilePath` setting.
-* Watches can be configured to nest the output media inside of a nested, episode directory structure. i.e. `/DestinationDirectory/TitleName/Season 1/output.mp4`
+* Watches can be configured to place the output media inside of a nested, episode directory structure. i.e. `/DestinationDirectory/TitleName/Season #/output.mp4`
 * Watcher service scans the watched directories on start, and continues to watch the locations for new, and removed files.
 * Subtitles matching the source name (and/or extending the name with a language, or contained within a subdirectory named `subs`), will be embedded inside the output media.
 ***
 ### Prerequisites
-[HandBrake-CLI](https://handbrake.fr/downloads2.php) must be added to $PATH (Windows platforms require handbrake to be added under system rather than user level encironment variables): [Linux](https://opensource.com/article/17/6/set-path-linux), [Windows 10](https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/).
+[HandBrake-CLI](https://handbrake.fr/downloads2.php) must be added to $PATH (Windows platforms require handbrake to be added under system rather than user level environment variables): [Linux](https://opensource.com/article/17/6/set-path-linux), [Windows 10](https://www.architectryan.com/2018/03/17/add-to-the-path-on-windows-10/).
 
 Afterwards, you must either restart (windows) or `source ~/.*rc`, depending on which shell you use.
 

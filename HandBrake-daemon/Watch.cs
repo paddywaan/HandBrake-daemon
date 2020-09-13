@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using IniParser;
@@ -66,14 +65,12 @@ namespace HandBrake_daemon
         {
             logger = loggingService;
             logger.LogInformation("Loading watchers");
-            //logger.LogDebug($"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + Path.DirectorySeparatorChar + "HandBrakeDaemon.conf"}");
             ConfPath = (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) ? "/etc/HandBrakeDaemon.conf" : Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) + Path.DirectorySeparatorChar + "HandBrakeDaemon.conf";
             if (!File.Exists(ConfPath))
             {
                 var defConf = Assembly.GetExecutingAssembly().GetManifestResourceStream("HandBrake_daemon.default.conf");
                 using var sr = new StreamReader(defConf);
                 File.WriteAllText(ConfPath, sr.ReadToEnd());
-                //File.Copy(Assembly.GetExecutingAssembly().GetManifestResourceStream("HandBrake_daemon.default.conf"), ConfPath);
             }
             HostApp = hostApp;
             _QueueService = QueueService.Instance;
@@ -83,12 +80,10 @@ namespace HandBrake_daemon
 
         private void AddQueueItem(Watch watch, string filePath)
         {
-            //is directory?
-            //logger.LogDebug($"{string.Join(",", watch.Extentions)} vs FileExt: {Path.GetExtension(filePath).Replace(".", string.Empty)}");
             if (watch.Extentions.Contains(Path.GetExtension(filePath).Replace(".",string.Empty)))
             {
                 logger.LogInformation($"SCANNER=> Media found: {filePath}");
-                _QueueService.Add(new HBQueueItem(watch, filePath, Path.GetFileName(filePath)));
+                _QueueService.Add(new MediaItem(watch, filePath, Path.GetFileName(filePath)));
             }
             else logger.LogDebug($"Scanner=> Skipping: {filePath}");
         }
@@ -129,9 +124,8 @@ namespace HandBrake_daemon
         {
             if (Watchers.Count == 0)
             {
-                logger.LogWarning("No watchers detected. Add watchers to the service before starting it.");
+                logger.LogWarning("No watchers detected, now terminating. Add watchers to the service before starting it.");
                 HostApp.StopApplication();
-                //Environment.Exit(0);
             }
             foreach(var watcher in Watchers)
             {
@@ -194,12 +188,10 @@ namespace HandBrake_daemon
             {
                 watch.Dispose();
             }
-            //throw new NotImplementedException();
         }
 
         public static List<Watch>ReadConfd(string fPath)
         {
-            //using StreamReader sr = new StreamReader(fPath);
             List<Watch> tempWatchers = new List<Watch>();
             FileIniDataParser parser = new FileIniDataParser();
             var x = parser.ReadFile(fPath);
@@ -207,8 +199,7 @@ namespace HandBrake_daemon
             {
                 foreach(var key in section.Keys)
                 {
-                    if (key.Value == null && (key.KeyName != "origin" || key.KeyName != "isShow")) throw new Exception(
-                          $"Missing config parameter for: {section}:{key}");
+                    if (key.Value == null && (key.KeyName != "origin" || key.KeyName != "isShow")) throw new Exception($"Missing config parameter for: {section}:{key}");
                 }
                 
                 var tWatch = new Watch(section.Keys["source"], section.Keys["destination"], section.Keys["origin"], section.Keys["profilePath"], section.Keys["extentions"]?.Split(",").ToList(), Convert.ToBoolean(section.Keys["isShow"]));
@@ -220,30 +211,5 @@ namespace HandBrake_daemon
             }
             return tempWatchers;
         }
-
-        /*public static List<Watch> ReadConf(string fPath)
-        {
-            using StreamReader sr = new StreamReader(fPath);
-            string line;
-            var temp = new List<Watch>();
-            var splitReg = new Regex(@"[ ](?=(?:[^""]*""[^""]*"")*[^""]*$)"); //Splits string delimited by spaces, excluding spaces surrounded with quotes
-            while ((line = sr.ReadLine()) != null)
-            {
-                if (!line.StartsWith('#'))
-                {
-                    var args = splitReg.Split(line);
-                    var exts = (args[4] == "\"\"") ? new List<string> { "mp4", "mkv", "avi" } : args[4].Split(",").ToList();
-                    for(int i=0;i<2;i++)
-                    {
-                        if (!Directory.Exists(args[i])) throw new Exception($"Config references a directory which does not exist: {args[i]}");
-                    }
-                    if (!File.Exists(args[3])) throw new Exception($"Config references a filepath which does not exist: {args[3]}");
-                    var toAdd = new Watch(args[0], args[1], (args[2] == "\"\"") ? string.Empty : args[2], args[3], exts, (args.Length == 6) && bool.Parse(args[5]));
-                    temp.Add(toAdd);
-                }
-            }
-            if (temp.Count == 0) return null;
-            return temp;
-        }*/
     }
 }

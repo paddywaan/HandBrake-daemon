@@ -11,74 +11,21 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-
 namespace HandBrake_daemon
 {
-    public class HBQueueItem
+    public class MediaItem
     {
         public Watch WatchInstance;
-        private readonly string fPath;
-        private readonly string fName;
-        private readonly string fExt;
+        public string FilePath { get; }
+        public string FileName { get; }
+        public string Extention { get; }
 
-        public HBQueueItem(Watch watchInstance, string fpath, string fname)
+        public MediaItem(Watch watchInstance, string fpath, string fname)
         {
             WatchInstance = watchInstance;
-            this.fPath = fpath;
-            this.fName = fname;
-            this.fExt = Path.GetExtension(fPath); //Regex.Match(fname, "[.][a-zA-Z0-9]{1,4}$").Value;
-        }
-
-        public string FilePath
-        {
-            get { return fPath; }
-        }
-        public string FileName
-        {
-            get
-            {
-                return fName;
-            }
-        }
-        public string Extention
-        {
-            get
-            {
-                return fExt;
-            }
-        }
-    }
-
-    public class TestService : BackgroundService, IDisposable
-    {
-        private readonly ILogger<TestService> Logger;
-        public TestService(ILogger<TestService> logger)
-        {
-            Logger = logger;
-        }
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-                Logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-                await Task.Delay(1000, stoppingToken);
-        }
-    }
-
-    public class Worker : BackgroundService, IDisposable
-    {
-        private readonly ILogger<Worker> _logger;
-
-        public Worker(ILogger<Worker> logger)
-        {
-            _logger = logger;
-        }
-
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-        {
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-                await Task.Delay(1000, stoppingToken);
-            }
+            this.FilePath = fpath;
+            this.FileName = fname;
+            this.Extention = Path.GetExtension(FilePath); //Regex.Match(fname, "[.][a-zA-Z0-9]{1,4}$").Value;
         }
     }
 
@@ -86,7 +33,7 @@ namespace HandBrake_daemon
     {
         public static QueueService Instance { get; private set; }
         private readonly ILogger<QueueService> logger;
-        private Queue<HBQueueItem> HBQueue;
+        private Queue<MediaItem> HBQueue;
         private const string HBProc = "HandBrakeCLI";
         private const int SleepDelay = 5000;
         private Process HBService;
@@ -96,10 +43,9 @@ namespace HandBrake_daemon
         public QueueService(ILogger<QueueService> logService, IHostApplicationLifetime appLifeTime)
         {
             logger = logService;
-            HBQueue = new Queue<HBQueueItem>();
-            Debug.Assert(debug = true);
+            HBQueue = new Queue<MediaItem>();
+            Debug.Assert(debug = true); //set to true if we are built for debug, used for certain logs and non deletion of media post-process.
             _appLifeTime = appLifeTime;
-            //Task.Run(() => { OnStart(); });
             Instance = this;
         }
         public string QueueString
@@ -107,7 +53,7 @@ namespace HandBrake_daemon
             get
             { return (HBQueue.Count == 0) ? "Empty" : String.Join(Environment.NewLine, HBQueue.Select(x => x.FileName)); }
         }
-        public void Add(HBQueueItem item)
+        public void Add(MediaItem item)
         {
             if (HBQueue.Where(x => x.FilePath == item.FilePath).ToList().Count > 0) throw new Exception(
                 $"QueueItem already exists: {item.FilePath}");
@@ -117,7 +63,7 @@ namespace HandBrake_daemon
         }
         public void Remove(string fPath)
         {
-            HBQueue = new Queue<HBQueueItem>(HBQueue.Where(x => x.FilePath != fPath));
+            HBQueue = new Queue<MediaItem>(HBQueue.Where(x => x.FilePath != fPath));
             logger.LogInformation($"Removed item from queue: {Path.GetFileName(fPath)}");
             logger.LogDebug($"Queue is now: " + QueueString);
         }
@@ -130,22 +76,21 @@ namespace HandBrake_daemon
 
         protected async Task RunAsync(CancellationToken stoppingToken)
         {
-            //if (!File.Exists(HBProc)) throw new FileNotFoundException($"HandBrakeCLI could not be found in location: {HBProc}");
             while (!stoppingToken.IsCancellationRequested)
             {
                 if (HBQueue.Count > 0 && (HBService==null || HBService.HasExited))
                 {
-                    if (IsFileReady(HBQueue.Peek().FilePath))
+                    if (IsFileReady(HBQueue.Peek().FilePath)) //Check that data is not being written to the source media before we process it.
                     {
                         logger.LogDebug($"File: {HBQueue.Peek().FilePath} is not locked. Processing...");
                         var poppedQueue = HBQueue.Dequeue();
-
-                        //logger.LogInformation($"Removed item from queue: {poppedQueue.FileName}");
-                        //logger.LogDebug($"Queue is now: " + QueueString);
                         var argsSB = new StringBuilder();
+
                         var baseArgs = $"--preset-import-file \"{poppedQueue.WatchInstance.ProfilePath}\" -Z {poppedQueue.WatchInstance.ProfileName}" +
                             $" -i \"{poppedQueue.FilePath}\"";
                         argsSB.Append(baseArgs);
+                        
+                        //Add all relevant subtitles to the process
                         var tup = GetSubs(poppedQueue.FilePath);
                         if (tup.Item1.Count > 0)
                         {
@@ -154,6 +99,7 @@ namespace HandBrake_daemon
                             argsSB.Append(" --all-subtitles");
                         }
 
+                        //Determine output directory for convenience
                         string destDir = poppedQueue.WatchInstance.Destination; ;
                         if (poppedQueue.WatchInstance.IsShow)
                         {
@@ -167,39 +113,42 @@ namespace HandBrake_daemon
                                 Directory.CreateDirectory(destDir);
                             }
                         }
-
                         argsSB.Append($" -o \"{destDir + Path.DirectorySeparatorChar + poppedQueue.FileName}\"");
 
-
+                        //Set up the process
                         logger.LogInformation($"Encoding {poppedQueue.FileName}");
                         logger.LogDebug($"Used Args: {argsSB}");
-
                         HBService = new Process
                         {
                             StartInfo = new ProcessStartInfo(HBProc, argsSB.ToString())
                         };
                         HBService.StartInfo.UseShellExecute = false;
                         HBService.StartInfo.RedirectStandardOutput = false;
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) HBService.StartInfo.RedirectStandardError = true;
+                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) HBService.StartInfo.RedirectStandardError = true; //if we redirect standard error we can capture progress output.
                         HBService.StartInfo.CreateNoWindow = true;
                         stoppingToken.Register(() => HBService?.Kill()); //Errors here are likely due to HandBrakeCLI exec not being found/started.
-                        HBService.EnableRaisingEvents = true;
-                        HBService.Exited += new EventHandler((sender, e) => HBService_Exited(sender, e, poppedQueue)); //prevents continuation?
-                        logger.LogDebug($"Starting HBCLI");
+                        HBService.EnableRaisingEvents = true; //Allows our stopping token to interrupt the transcode
+                        HBService.Exited += new EventHandler((sender, e) => HBService_Exited(sender, e, poppedQueue));
+                        logger.LogDebug($"Starting HBCLI @ {HBService.StartTime}");
                         HBService.Start();
-                        logger.LogDebug($"HBCLI Started: {HBService.StartTime}");
                         HBService.PriorityClass = ProcessPriorityClass.BelowNormal;
                     }
-                    else logger.LogWarning($"File {HBQueue.Peek().FilePath} is locked");
+                    else logger.LogWarning($"File {HBQueue.Peek().FilePath} is locked"); //Wait until the file is not busy
                 }
                 await Task.Delay(SleepDelay, stoppingToken);
             }
         }
 
-        private void HBService_Exited(object sender, EventArgs e, HBQueueItem poppedQueue)
+        /// <summary>
+        /// Called post-encode but before RunAsync returns.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        /// <param name="poppedQueue">The reference to the QueueItem which was processed by HandBrakeCLI</param>
+        private void HBService_Exited(object sender, EventArgs e, MediaItem poppedQueue)
         {
             logger.LogInformation("Encode completed.");
-            if (!debug)
+            if (!debug) //perform post-processes & media cleanup
             {
                 logger.LogDebug($"Origin: {poppedQueue.WatchInstance.Origin}, FilePath: {poppedQueue.FilePath}");
                 if (String.IsNullOrEmpty(poppedQueue.WatchInstance.Origin)) File.Delete(poppedQueue.FilePath);
@@ -208,44 +157,48 @@ namespace HandBrake_daemon
             }
         }
 
-        public static Tuple<List<string>,List<string>> GetSubs(string fPath)
+        /// <summary>
+        /// Compiles and formats lists of subsfiles and their corresponding languages ready for HandBrakeCLI
+        /// </summary>
+        /// <param name="mediaSource">The filepath of the source media</param>
+        /// <returns>The first list is a list of relevant subtitle paths for the current media source, the second is the corresponding list of languages for those files.</returns>
+        public static Tuple<List<string>,List<string>> GetSubs(string mediaSource)
         {
             var tempsrtPATH = new List<string>();
             var tempLangs = new List<string>();
-            var mediaRoot = Path.GetDirectoryName(fPath);
+            var mediaRoot = Path.GetDirectoryName(mediaSource);
+
+            //First check the source media's directory for files of the same prefix
             foreach (var file in Directory.GetFiles(mediaRoot))
             {
-                if (Path.GetExtension(file).Equals(".srt") && Path.GetFileNameWithoutExtension(file).Contains(Path.GetFileNameWithoutExtension(fPath), StringComparison.OrdinalIgnoreCase))
+                if (Path.GetExtension(file).Equals(".srt") && Path.GetFileNameWithoutExtension(file).Contains(Path.GetFileNameWithoutExtension(mediaSource), StringComparison.OrdinalIgnoreCase))
                 {
-                    //Console.WriteLine($"Compared {Path.GetFileNameWithoutExtension(file)} contains?: {Path.GetFileNameWithoutExtension(fPath)} MediaRoot:{fPath}");
                     tempsrtPATH.Add(file);
-                    if (Path.GetFileNameWithoutExtension(file).Equals(Path.GetFileNameWithoutExtension(fPath), StringComparison.OrdinalIgnoreCase))
+                    if (Path.GetFileNameWithoutExtension(file).Equals(Path.GetFileNameWithoutExtension(mediaSource), StringComparison.OrdinalIgnoreCase))
                         tempLangs.Add("und");
                     else
                         tempLangs.Add(GetSubLang(file));
                 }
             }
 
+            //Next we check if a "subs" directory exists, if it does we will also check for names of the same prefix, however we will also check for .srt's that contain a languagecode prefix follow by a language.
             //We need to ignore invariants due to Directory.Exists ignoring on NTFS but not Ext4.
             try
             {
                 var SubDir = new DirectoryInfo(mediaRoot + Path.DirectorySeparatorChar).GetDirectories().First(x => x.Name.Equals("subs", StringComparison.OrdinalIgnoreCase)).Name;
-                //if (!(logger is null)) logger.LogDebug($"Ext: {SubDir}");
                 if (Directory.Exists(mediaRoot + Path.DirectorySeparatorChar + SubDir))
                 {
                     foreach (var file in Directory.GetFiles(mediaRoot + Path.DirectorySeparatorChar + SubDir))
                     {
-                        //if (!(logger is null)) logger.LogDebug($"Ext: {Path.GetExtension(file)}");
                         if (Path.GetExtension(file).Equals(".srt"))
                         {
-                            //if (!(logger is null)) logger.LogDebug($"Compared {Path.GetFileNameWithoutExtension(file)} contains?: {Path.GetFileNameWithoutExtension(fPath)} MediaRoot:{fPath}");
                             var startsReg = new Regex(@"\d{1,2}_");
-                            if (Path.GetFileNameWithoutExtension(file).Equals(Path.GetFileNameWithoutExtension(fPath), StringComparison.OrdinalIgnoreCase))
+                            if (Path.GetFileNameWithoutExtension(file).Equals(Path.GetFileNameWithoutExtension(mediaSource), StringComparison.OrdinalIgnoreCase))
                             {
                                 tempsrtPATH.Add(file);
                                 tempLangs.Add("und");
                             }
-                            else if (Path.GetFileNameWithoutExtension(file).Contains(Path.GetFileNameWithoutExtension(fPath), StringComparison.OrdinalIgnoreCase) || startsReg.IsMatch(file))
+                            else if (Path.GetFileNameWithoutExtension(file).Contains(Path.GetFileNameWithoutExtension(mediaSource), StringComparison.OrdinalIgnoreCase) || startsReg.IsMatch(file))
                             {
                                 tempsrtPATH.Add(file);
                                 tempLangs.Add(GetSubLang(file));
@@ -257,10 +210,15 @@ namespace HandBrake_daemon
             catch (InvalidOperationException) { }
             return new Tuple<List<string>, List<string>>(tempsrtPATH, tempLangs);
         }
+
+        /// <summary>
+        /// Given a filename, will strip any language from a sub-extention within the file. For example test.English.txt
+        /// </summary>
+        /// <param name="mediaSource">The file name (not path) to extract a language from.</param>
+        /// <returns>Returns the sub-extention after parsing and stripping of special characters, or "und" if the regex failed to match any text.</returns>
         public static string GetSubLang(string mediaSource)
         {
             var name = Path.GetFileName(mediaSource);
-            //Match m = Regex.Match(name, @"[a-zA-Z0-9_\(\)]*$");
             Match m = Regex.Match(name, @"[a-zA-Z0-9_\(\)]*.srt$");
             if (m.Success)
             {
@@ -270,19 +228,23 @@ namespace HandBrake_daemon
             return "und";
         }
 
-        public static bool IsFileReady(string filename)
+        /// <summary>
+        /// Used: https://stackoverflow.com/users/21299/gordon-thompson
+        /// To test if the file is currently being written too.
+        /// This method only works for NTFS, is ineffectual on linux. Needs to be addressed at some point.
+        /// </summary>
+        /// <param name="path">The filepath to test if data is currently being written too</param>
+        /// <returns>True when a lock is able to be acquired, false otherwise. </returns>
+        public static bool IsFileReady(string path)
         {
             // If the file can be opened for exclusive access it means that the file
             // is no longer locked by another process.
             try
             {
-                using FileStream inputStream = File.Open(filename, FileMode.Open, FileAccess.Read, FileShare.None);
+                using FileStream inputStream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.None);
                 return inputStream.Length > 0;
             }
-            catch (Exception)
-            {
-                return false;
-            }
+            catch (Exception) { return false; }
         }
 
         public override void Dispose()
@@ -294,44 +256,4 @@ namespace HandBrake_daemon
             base.Dispose();
         }
     }
-
-
-    /// <summary>
-    /// Taken from Ryan's WaitForExitAsync:
-    /// https://stackoverflow.com/questions/470256/process-waitforexit-asynchronously
-    /// https://stackoverflow.com/users/2266345/ryan
-    /// </summary>
-    public static class ProcessExtensions
-    {
-        public static async Task WaitForExitAsync(this Process process, CancellationToken cancellationToken = default)
-        {
-            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            void Process_Exited(object sender, EventArgs e)
-            {
-                tcs.TrySetResult(true);
-            }
-
-            process.EnableRaisingEvents = true;
-            process.Exited += Process_Exited;
-
-            try
-            {
-                if (process.HasExited)
-                {
-                    return;
-                }
-
-                using (cancellationToken.Register(() => tcs.TrySetCanceled()))
-                {
-                    await tcs.Task.ConfigureAwait(false);
-                }
-            }
-            finally
-            {
-                process.Exited -= Process_Exited;
-            }
-        }
-    }
-
 }

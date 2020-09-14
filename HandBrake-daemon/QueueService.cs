@@ -165,9 +165,9 @@ namespace HandBrake_daemon
         }
 
         /// <summary>
-        /// Compiles and formats lists of subsfiles and their corresponding languages ready for HandBrakeCLI
+        /// Compiles and formats lists of sub-files and their corresponding languages ready for HandBrakeCLI
         /// </summary>
-        /// <param name="mediaSource">The filepath of the source media</param>
+        /// <param name="mediaSource">The file path of the source media</param>
         /// <returns>The first list is a list of relevant subtitle paths for the current media source, the second is the corresponding list of languages for those files.</returns>
         public static Tuple<List<string>,List<string>> GetSubs(string mediaSource)
         {
@@ -219,10 +219,10 @@ namespace HandBrake_daemon
         }
 
         /// <summary>
-        /// Given a filename, will strip any language from a sub-extention within the file. For example test.English.txt
+        /// Given a filename, will strip any language from a sub-extension within the file. For example test.English.txt
         /// </summary>
         /// <param name="mediaSource">The file name (not path) to extract a language from.</param>
-        /// <returns>Returns the sub-extention after parsing and stripping of special characters, or "und" if the regex failed to match any text.</returns>
+        /// <returns>Returns the sub-extension after parsing and stripping of special characters, or "und" if the regex failed to match any text.</returns>
         public static string GetSubLang(string mediaSource)
         {
             var name = Path.GetFileName(mediaSource);
@@ -238,9 +238,9 @@ namespace HandBrake_daemon
         /// <summary>
         /// Used: https://stackoverflow.com/users/21299/gordon-thompson
         /// To test if the file is currently being written too.
-        /// This method only works for NTFS, is ineffectual on linux. Needs to be addressed at some point.
+        /// This method only works for NTFS, is ineffectual on Linux. Needs to be addressed at some point.
         /// </summary>
-        /// <param name="path">The filepath to test if data is currently being written too</param>
+        /// <param name="path">The file path to test if data is currently being written too</param>
         /// <returns>True when a lock is able to be acquired, false otherwise. </returns>
         public static bool IsFileReady(string path)
         {

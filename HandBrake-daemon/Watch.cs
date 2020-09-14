@@ -187,7 +187,7 @@ namespace HandBrake_daemon
                     if (key.Value == null && (key.KeyName != "origin" || key.KeyName != "isShow")) throw new Exception($"Missing config parameter for: {section}:{key}");
                 }
                 
-                var tWatch = new Watch(section.Keys["source"], section.Keys["destination"], section.Keys["origin"], section.Keys["profilePath"], section.Keys["extentions"]?.Split(",").ToList(), Convert.ToBoolean(section.Keys["isShow"]));
+                var tWatch = new Watch(section.Keys["source"], section.Keys["destination"], section.Keys["origin"], section.Keys["profilePath"], section.Keys["extensions"]?.Split(",").ToList(), Convert.ToBoolean(section.Keys["isShow"]));
                 if (!Directory.Exists(tWatch.Source)) throw new Exception($"Config references a directory which does not exist: {tWatch.Source}");
                 if (!Directory.Exists(tWatch.Destination)) throw new Exception($"Config references a directory which does not exist: {tWatch.Destination}");
                 if (!string.IsNullOrEmpty(tWatch.Origin) && !Directory.Exists(tWatch.Origin)) throw new Exception($"Config file references a directory which does not exist: {tWatch.Origin}");

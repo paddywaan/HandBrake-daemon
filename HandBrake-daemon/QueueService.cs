@@ -132,7 +132,8 @@ namespace HandBrake_daemon
                         HBService.StartInfo.RedirectStandardOutput = false;
                         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) HBService.StartInfo.RedirectStandardError = true; //if we redirect standard error we can capture progress output.
                         HBService.StartInfo.CreateNoWindow = true;
-                        stoppingToken.Register(() => HBService?.Kill()); //"No process is associated with this object" errors here are likely due to HandBrakeCLI exec not being found/started.
+                        stoppingToken.Register(() => HBService?.Kill()); //"No process is associated with this object" errors here are likely due to HandBrakeCLI exec not being found (is PATH correct?),
+                        //or to referencing HBservice before it has been started.
                         HBService.EnableRaisingEvents = true; //Allows our stopping token to interrupt the transcode
                         HBService.Exited += new EventHandler((sender, e) => HBService_Exited(sender, e, poppedQueue));
                         HBService.Start();

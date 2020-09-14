@@ -4,15 +4,15 @@ Description=HandBrake-daemon directory watcher service
 [Service]
 Type=notify
 
-###This directory must contain the appsettings.json. If appsettings.json is not present, the HostBuilder service will recursively check for the existance of appsettings starting from the current working directory.
+###This directory must contain the appsettings.json. If appsettings.json is not present, the HostBuilder service will recursively check for the existence of appsettings starting from the current working directory.
 ###If no working directory is specified, the working directory will default to / which will result in INotify watches being consumed until limit, and will prevent the daemon from creating its own directory watchers.
 ###Please make sure that appsettings.json is in the working directory. By default, the install script copies appsettings to /usr/bin/local, however you may choose a more appropriate location for a working directory and appsettings.
 ###Ensure the WorkingDirectory has the correct permissions for the defined service user.
 WorkingDirectory=/usr/local/bin
 
-ExecStart=/usr/local/bin/HandBrake-daemon
-StandardOutput=append:/var/log/HandBrake-daemon.log
-StandardError=append:/var/log/HandBrake-daemon.log
+ExecStart=/usr/local/bin/handbrake-daemon
+StandardOutput=append:/var/log/handbrake-daemon.log
+StandardError=append:/var/log/handbrake-daemon.log
 
 ###Change these to meet the directory permissions of the directory(s) of which you store media.
 #User=

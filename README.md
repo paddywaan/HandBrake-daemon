@@ -34,10 +34,11 @@ After you have configured the systemd unit, please reload the daemon with: `sudo
 [Download]() and extract the zip to the desired location, then run install.cmd as administrator to register the binary as a system service.
 ***
 ### Configuration
-Linux platforms store the configuration in `/etc/HandBrake-daemon.conf`
+Linux platforms store the configuration in `/etc/handbrake-daemon.conf`
 Windows platforms store the configuration in the installation/extracted directory.
 
 **At least a single watcher must be defined in order for the service to run.**
+**Please make sure that you create all referenced directories  and profiles with appropriate permissions before running the service**
 
 The source directory is used as the directory to watch for new media to process, and upon completion the output will be placed inside the destination directory.
 If an *origin* directory is specified, the source file will be moved to the *Origin*al Media directory.

@@ -43,6 +43,7 @@ namespace HandBrake_daemon
         public QueueService(ILogger<QueueService> logService, IHostApplicationLifetime appLifeTime)
         {
             logger = logService;
+            if (!HBCIsInstalled()) throw new Exception("Please install HandBrakeCLI before starting the service.");
             HBQueue = new Queue<MediaItem>();
             Debug.Assert(debug = true); //set to true if we are built for debug, used for certain logs and non deletion of media post-process.
             _appLifeTime = appLifeTime;
@@ -253,5 +254,23 @@ namespace HandBrake_daemon
             }
             catch (Exception) { return false; }
         }
+        public bool HBCIsInstalled()
+        {
+            foreach(var dir in Environment.GetEnvironmentVariable("PATH").Split(PathSeperatorCharacter()))
+            {
+                logger.LogDebug($"Checking for HB-CLI in: {dir + Path.DirectorySeparatorChar + HBProc}");
+                if (File.Exists(dir + Path.DirectorySeparatorChar + HBProc)) return true;
+                if (File.Exists(dir + Path.DirectorySeparatorChar + HBProc + ".exe")) return true;
+            }
+            return false;
+        }
+        public static char PathSeperatorCharacter()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return ';';
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD)) return ':';
+            throw new PlatformNotSupportedException();
+        }
     }
+
+
 }

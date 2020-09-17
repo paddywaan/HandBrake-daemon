@@ -254,9 +254,13 @@ namespace HandBrake_daemon
             }
             catch (Exception) { return false; }
         }
+        /// <summary>
+        /// Check that HB-cli is installed before we proceed.
+        /// </summary>
+        /// <returns>True when one of the $PATH locations contains a HandBrakeCLI/.exe file</returns>
         public bool HBCIsInstalled()
         {
-            foreach(var dir in Environment.GetEnvironmentVariable("PATH").Split(PathSeperatorCharacter()))
+            foreach(var dir in Environment.GetEnvironmentVariable("PATH").Split(MultipathSeperatorCharacter()))
             {
                 logger.LogDebug($"Checking for HB-CLI in: {dir + Path.DirectorySeparatorChar + HBProc}");
                 if (File.Exists(dir + Path.DirectorySeparatorChar + HBProc)) return true;
@@ -264,7 +268,11 @@ namespace HandBrake_daemon
             }
             return false;
         }
-        public static char PathSeperatorCharacter()
+        /// <summary>
+        /// Gets the platform specific multi-path delimiter character.
+        /// </summary>
+        /// <returns>The platform specific separator character.</returns>
+        public static char MultipathSeperatorCharacter()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return ';';
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD)) return ':';

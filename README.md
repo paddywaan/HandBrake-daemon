@@ -31,7 +31,7 @@ Afterwards, you must either restart (windows) or `source ~/.*rc`, depending on w
 sudo bash -c "$(curl -s -L https://raw.githubusercontent.com/paddywaan/HandBrake-daemon/master/HandBrake-daemon/install.sh)"
 ```
 ##### Manual method
-[Download](https://github.com/paddywaan/HandBrake-daemon/releases) the zip and extract, then run the install.sh after verifying its contents. The install script will move the necessary config files to their appropriate locations.
+[Download](https://github.com/paddywaan/HandBrake-daemon/releases/latest) the zip and extract, then run the install.sh after verifying its contents. The install script will move the necessary config files to their appropriate locations.
 
 Please double check that `/etc/systemd/system/handbrake-daemon.service` is to your liking. You probably want to set the `WorkingDirectory`, `User`, and `Group` for the service to match your file system. If you change the WD, make sure to place the appsettings.json inside the new WD.
 If you have multiple, different locations under different users, please add them to a group which the service daemon runs under.
@@ -48,7 +48,7 @@ sudo bash -c "$(curl -s -L https://raw.githubusercontent.com/paddywaan/HandBrake
 ```
 
 #### Windows Installation
-[Download](https://github.com/paddywaan/HandBrake-daemon/releases) and extract the zip to the desired location, then run install.cmd as administrator to register the binary as a system service.
+[Download](https://github.com/paddywaan/HandBrake-daemon/releases/latest) and extract the zip to the desired location, then run install.cmd as administrator to register the binary as a system service.
 ***
 ### Configuration
 Linux platforms store the configuration in `/etc/handbrake-daemon.conf`

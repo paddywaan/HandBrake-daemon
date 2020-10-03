@@ -22,13 +22,30 @@ I am not a professional and this is my first attempt at maintaining a project, w
 Afterwards, you must either restart (windows) or `source ~/.*rc`, depending on which shell you use.
 
 ***
-#### Linux Installation
+#### Linux Installation & Upgrade
+##### Automatic method
+
+  * Verify the contents of [install.sh](https://raw.githubusercontent.com/paddywaan/HandBrake-daemon/master/HandBrake-daemon/install.sh)
+  * Run the follwing command in a terminal emulator of your liking:
+```
+sudo bash -c "$(curl -s -L https://raw.githubusercontent.com/paddywaan/HandBrake-daemon/master/HandBrake-daemon/install.sh)"
+```
+##### Manual method
 [Download]() the zip and extract, then run the install.sh after verifying its contents. The install script will move the necessary config files to their appropriate locations.
 
 Please double check that `/etc/systemd/system/handbrake-daemon.service` is to your liking. You probably want to set the `WorkingDirectory`, `User`, and `Group` for the service to match your file system. If you change the WD, make sure to place the appsettings.json inside the new WD.
 If you have multiple, different locations under different users, please add them to a group which the service daemon runs under.
 
 After you have configured the systemd unit, please reload the daemon with: `sudo systemctl daemon-reload` and proceed with configuration.
+
+#### Linux Removal / Uninstall
+##### Automatic method
+
+  * Verify the contents of [uninstall.sh](https://raw.githubusercontent.com/paddywaan/HandBrake-daemon/master/HandBrake-daemon/uninstall.sh)
+  * Run the follwing command in a terminal emulator of your liking:
+```
+sudo bash -c "$(curl -s -L https://raw.githubusercontent.com/paddywaan/HandBrake-daemon/master/HandBrake-daemon/uninstall.sh)"
+```
 
 #### Windows Installation
 [Download]() and extract the zip to the desired location, then run install.cmd as administrator to register the binary as a system service.

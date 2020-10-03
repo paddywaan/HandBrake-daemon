@@ -168,7 +168,7 @@ else
 	read -p "  (U)pgrade/(I)nstall? " choice
 	case "$choice" in
 	  u|U ) upgrade;;
-	  i|I ) install ;;
+	  i|I ) install;;
 	  * ) echo "Invalid input - abort." && exit;;
 	esac
 fi

@@ -10,6 +10,12 @@ using System.Threading.Tasks;
 using IniParser;
 using System.Reflection;
 using Microsoft.Extensions.Options;
+using System.Runtime.InteropServices.ComTypes;
+using System.Text.RegularExpressions;
+using System.Xml;
+using System.Diagnostics;
+using System.Security.AccessControl;
+using System.Security.Principal;
 
 namespace HandBrake_daemon
 {
@@ -73,8 +79,63 @@ namespace HandBrake_daemon
             HostApp = hostApp;
             _QueueService = QueueService.Instance;
             LoadWatchlist();
+            CheckPermissions();
             ScanWatchDirs();
         }
+
+        private void CheckPermissions()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                string serviceFile = "/etc/systemd/system/handbrake-daemon.service";
+                if (!File.Exists(serviceFile)) throw new Exception("SystemD service unit for handbrake-daemon does not exist. Please install the service before proceeding.");
+                //var userReg = @"^[#?]User=(.*)$";
+                //var groupReg = @"^[#?]Group=(.*)$";
+                //string gid, uid;
+                //var txt = string.Join(Environment.NewLine, File.ReadAllLines(serviceFile));
+                //logger.LogDebug($"{txt}");
+                ////if (userMatch.IsMatch(txt) && groupMatch.IsMatch(txt))
+                //var umatch = Regex.Match(txt, userReg, RegexOptions.Multiline);
+                //var gmatch = Regex.Match(txt, groupReg, RegexOptions.Multiline);
+                ////logger.LogDebug($"{ umatch.Groups[1]}");
+                ////logger.LogDebug($"{ gmatch.Groups[1]}");
+                //if (umatch.Success && gmatch.Success)
+                //{
+                    
+                    //uid = umatch.Groups[1].Value;
+                    //gid = gmatch.Groups[1].Value;
+                    foreach (var watch in Watching)
+                    {
+                        if (!(HasDirectoryAuth(watch.Source) && HasDirectoryAuth(watch.Destination)))
+                        {
+                            logger.LogError($"Invalid permissions to: {(!HasDirectoryAuth(watch.Source) ? watch.Source : watch.Destination)}");
+                        }
+                    }
+                //}
+                //else logger.LogDebug("Unable to match user and group from service file.");
+            }
+        }
+
+        /// <summary>
+        /// naive OS Agnostic method of returning directory permissions
+        /// </summary>
+        /// <param name="path">Directory path to check permissions</param>
+        /// <param name="user">The user ID of the current process</param>
+        /// <param name="group">The group ID of the current process</param>
+        /// <returns>true if the current process has RWX permissions and is owner.</returns>
+        private bool HasDirectoryAuth(string path)
+        {
+            try
+            {
+                File.Create(path + Path.DirectorySeparatorChar + "readwritetestfile.txt").Dispose();
+                File.Delete(path + Path.DirectorySeparatorChar + "readwritetestfile.txt");
+                return true;
+            }
+            catch (IOException) {
+                return false;
+            }
+        }
+
         private void AddQueueItem(Watch watch, string filePath)
         {
             if (watch.Extentions.Contains(Path.GetExtension(filePath).Replace(".",string.Empty)))
@@ -117,8 +178,9 @@ namespace HandBrake_daemon
         {
             if (Watchers.Count == 0)
             {
-                logger.LogWarning("No watchers detected, now terminating. Add watchers to the service before starting it.");
-                HostApp.StopApplication();
+                //logger.LogWarning("No watchers detected, now terminating. Add watchers to the service before starting it.");
+                throw new Exception("No watchers detected, now terminating. Add watchers to the service before starting it.");
+                //HostApp.StopApplication();
             }
             foreach(var watcher in Watchers)
             {

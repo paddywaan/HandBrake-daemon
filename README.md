@@ -44,7 +44,7 @@ The source directory is used as the directory to watch for new media to process,
 If an *origin* directory is specified, the source file will be moved to the *Origin*al Media directory.
 If none is specified, the source will be deleted rather than moved.
 Watchers will only queue file extensions which are defined in the watch config.
-Transcode settings are taken from the profile .json, which can be created when running HandBrake's UI on a desktop platform, for ease of configuration.
+Transcode settings are taken from the profile .json, which can be created when running HandBrake's UI on a desktop platform, for ease of configuration. Alternatively
 The *isShow* boolean can be set to true in order to nest the output media inside subdirectories to aid organization of seasonal content.
 
 Finally, you may start the service for the first time:
@@ -57,7 +57,9 @@ When you are happy with the configuration, you can enable the daemon on boot via
 ***
 ### Logging
 
-**Linux:** Logging verbosity can be changed via setting the *default* level in appsettings.json: `Debug, Information, Warning, Error, Critical`. By default, the level is set to Information, and the *.json* is stored alongside the binary in `/usr/local/bin/` unless an alternative *WorkingDirectory* is specified inside the `.service` unit. The logs are stored at `/var/log/HandnBrake-daemon.log` by default, and an updated progress% on the current encode can be seen via: `tail -f /var/log/HandnBrake-daemon.log`.
+**Linux:** Logging verbosity can be changed via setting the *default* level in appsettings.json: `Debug, Information, Warning, Error, Critical`.
+By default, the level is set to Information, and the *.json* is stored alongside the binary in `/usr/local/bin/` unless an alternative *WorkingDirectory* is specified inside the `.service` unit.
+The logs are stored at `/var/log/handbrake-daemon.log` by default, and an updated progress% on the current encode can be seen via: `tail -f /var/log/handbrake-daemon.log`.
 
 **Windows:** Logging verbosity can be changed via setting the default level for the `EventLog` section in appsettings.json: `Debug, Information, Warning, Error, Critical`. By default the level is set to Information, and the logs are stored inside EventViewer: *Application*, under the source: *HandBrake-daemon*
 

@@ -1,6 +1,6 @@
 ﻿# HandBrake-daemon
 
-HandBrake-daemon is a cross platform (Windows, Linux) directory watcher service for [HandBrakeCLI](). Multiple watchers can be specified, which will queue and process media.
+HandBrake-daemon is a cross platform (Windows, Linux) directory watcher service for [HandBrakeCLI](https://handbrake.fr/downloads2.php). Multiple watchers can be specified, which will queue and process media.
 
 I am not a professional and this is my first attempt at maintaining a project, writing a service, and writing software for Linux, however I will do my best to resolve [issues](https://github.com/paddywaan/HandBrake-daemon/issues) when they are reported. PR's, suggestions and comments are welcome.
 
@@ -31,7 +31,7 @@ Afterwards, you must either restart (windows) or `source ~/.*rc`, depending on w
 sudo bash -c "$(curl -s -L https://raw.githubusercontent.com/paddywaan/HandBrake-daemon/master/HandBrake-daemon/install.sh)"
 ```
 ##### Manual method
-[Download]() the zip and extract, then run the install.sh after verifying its contents. The install script will move the necessary config files to their appropriate locations.
+[Download](https://github.com/paddywaan/HandBrake-daemon/releases) the zip and extract, then run the install.sh after verifying its contents. The install script will move the necessary config files to their appropriate locations.
 
 Please double check that `/etc/systemd/system/handbrake-daemon.service` is to your liking. You probably want to set the `WorkingDirectory`, `User`, and `Group` for the service to match your file system. If you change the WD, make sure to place the appsettings.json inside the new WD.
 If you have multiple, different locations under different users, please add them to a group which the service daemon runs under.

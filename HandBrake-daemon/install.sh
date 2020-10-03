@@ -65,8 +65,8 @@ function install () {
 	
 	printf "\n\n!!! YOU'RE NOT DONE YET!\n"
 	printf "!!!\n"
-	printf "!!! Make sure to read the Configuration section of the README.MD in order to specify watchers and\n"
-	printf "!!! create the respective directories. Otherwise the service is going to fail.\n"
+	printf "!!! Make sure to read the Configuration section of the README.MD in order to specify watchers, create the\n"
+	printf "!!! respective directories and adding a Handbrake profile. Without them, the service is not going to run.\n"
 	printf "!!!\n"
 	printf "!!! Please modify the following files to your liking:\n"
 	printf "!!!   Watcher configuration file: sudo vim /etc/handbrake-daemon.conf\n"

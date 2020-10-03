@@ -30,7 +30,9 @@ printf "This is going to disable the Daemon and PERMANENTLY REMOVE the following
 printf "  /usr/local/bin/handbrake-daemon\n"
 printf "  /usr/local/bin/appsettings.json\n"
 printf "  /etc/handbrake-daemon.conf\n"
-printf "  /etc/systemd/system/handbrake-daemon.service\n\n"
+printf "  /etc/systemd/system/handbrake-daemon.service\n"
+printf "  /var/log/handbrake-daemon.log\n"
+printf "\n"
 
 printf "The following files / folders will NOT be automatically removed, manual cleanup required:\n"
 printf "  " && cat /etc/handbrake-daemon.conf | grep 'source=' | cut -d= -f2
@@ -56,6 +58,7 @@ rm -v /usr/local/bin/handbrake-daemon
 rm -v /usr/local/bin/appsettings.json
 rm -v /etc/handbrake-daemon.conf
 rm -v /etc/systemd/system/handbrake-daemon.service
+rm -v /var/log/handbrake-daemon.log
 
 printf "\n  Cleanup complete\n\n"
 

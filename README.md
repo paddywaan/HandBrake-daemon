@@ -2,7 +2,7 @@
 
 HandBrake-daemon is a cross platform (Windows, Linux) directory watcher service for [HandBrakeCLI](). Multiple watchers can be specified, which will queue and process media.
 
-I am not a professional and this is my first attempt at maintaining a project, writing a service, and writing software for Linux, however I will do my best to resolve [issues]() when they are reported. PR's, suggestions and comments are welcome.
+I am not a professional and this is my first attempt at maintaining a project, writing a service, and writing software for Linux, however I will do my best to resolve [issues](https://github.com/paddywaan/HandBrake-daemon/issues) when they are reported. PR's, suggestions and comments are welcome.
 
 ***
 ### Change log

@@ -1,8 +1,8 @@
 ﻿# HandBrake-daemon
 
-HandBrake-daemon is a cross platform (Windows, Linux) directory watcher service for HandBrakeCLI. Multiple watchers can be specified, which will queue and process media.
+HandBrake-daemon is a cross platform (Windows, Linux) directory watcher service for [HandBrakeCLI](). Multiple watchers can be specified, which will queue and process media.
 
-I am not a professional and this is my first attempt at maintaining a project, writing a service, and writing software for Linux, however I will do my best to resolve issues when they are reported. PR's, suggestions and comments are welcome.
+I am not a professional and this is my first attempt at maintaining a project, writing a service, and writing software for Linux, however I will do my best to resolve [issues]() when they are reported. PR's, suggestions and comments are welcome.
 
 ***
 ### Change log
@@ -25,7 +25,7 @@ Afterwards, you must either restart (windows) or `source ~/.*rc`, depending on w
 #### Linux Installation
 [Download]() the zip and extract, then run the install.sh after verifying its contents. The install script will move the necessary config files to their appropriate locations.
 
-Please double check that `/etc/systemd/system/handbrake-daemon.service` is to your liking. You probably want to set the `WorkingDirectory`, `User`, and `Group` for the service to match your file system.
+Please double check that `/etc/systemd/system/handbrake-daemon.service` is to your liking. You probably want to set the `WorkingDirectory`, `User`, and `Group` for the service to match your file system. If you change the WD, make sure to place the appsettings.json inside the new WD.
 If you have multiple, different locations under different users, please add them to a group which the service daemon runs under.
 
 After you have configured the systemd unit, please reload the daemon with: `sudo systemctl daemon-reload` and proceed with configuration.
@@ -38,7 +38,7 @@ Linux platforms store the configuration in `/etc/handbrake-daemon.conf`
 Windows platforms store the configuration in the installation/extracted directory.
 
 **At least a single watcher must be defined in order for the service to run.**
-**Please make sure that you create all referenced directories  and profiles with appropriate permissions before running the service**
+**Please make sure that you create all referenced directories and profiles with appropriate permissions before running the service**
 
 The source directory is used as the directory to watch for new media to process, and upon completion the output will be placed inside the destination directory.
 If an *origin* directory is specified, the source file will be moved to the *Origin*al Media directory.

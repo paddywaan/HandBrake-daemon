@@ -158,10 +158,16 @@ namespace HandBrake_daemon
             logger.LogInformation("Encode completed.");
             if (!debug) //perform post-processes & media cleanup
             {
-                logger.LogDebug($"Origin: {poppedQueue.WatchInstance.Origin}, FilePath: {poppedQueue.FilePath}");
-                if (String.IsNullOrEmpty(poppedQueue.WatchInstance.Origin)) File.Delete(poppedQueue.FilePath);
-                else File.Move(poppedQueue.FilePath, poppedQueue.WatchInstance.Origin);
-                logger.LogDebug("Original file has been moved/deleted.");
+                if (HBService.ExitCode == 0)
+                {
+                    bool delete = String.IsNullOrEmpty(poppedQueue.WatchInstance.Origin);
+                    //logger.LogDebug($"Origin: {poppedQueue.WatchInstance.Origin}, FilePath: {poppedQueue.FilePath}");
+                    if (delete) File.Delete(poppedQueue.FilePath);
+                    else File.Move(poppedQueue.FilePath, poppedQueue.WatchInstance.Origin);
+                    logger.LogDebug("Original file has been " + (delete ? "deleted." : "moved."));
+                } else {
+                    logger.LogWarning($"Non 0 exitcode for: {poppedQueue.FilePath}, skipping post processing.");
+                }
             }
         }
 

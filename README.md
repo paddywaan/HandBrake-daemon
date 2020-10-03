@@ -48,7 +48,7 @@ sudo bash -c "$(curl -s -L https://raw.githubusercontent.com/paddywaan/HandBrake
 ```
 
 #### Windows Installation
-[Download]() and extract the zip to the desired location, then run install.cmd as administrator to register the binary as a system service.
+[Download](https://github.com/paddywaan/HandBrake-daemon/releases) and extract the zip to the desired location, then run install.cmd as administrator to register the binary as a system service.
 ***
 ### Configuration
 Linux platforms store the configuration in `/etc/handbrake-daemon.conf`

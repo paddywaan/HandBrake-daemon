@@ -9,13 +9,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using IniParser;
 using System.Reflection;
-using Microsoft.Extensions.Options;
-using System.Runtime.InteropServices.ComTypes;
-using System.Text.RegularExpressions;
-using System.Xml;
-using System.Diagnostics;
-using System.Security.AccessControl;
-using System.Security.Principal;
 
 namespace HandBrake_daemon
 {

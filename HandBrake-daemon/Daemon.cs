@@ -5,7 +5,6 @@ using Microsoft.Extensions.Configuration;
 using System;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
-using System.Linq;
 
 namespace HandBrake_daemon
 {
@@ -37,9 +36,9 @@ namespace HandBrake_daemon
                     //Add logging via EventLog only for Windows platforms
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
-                        if (!System.Diagnostics.EventLog.SourceExists(SERVICENAME))
+                        if (!EventLog.SourceExists(SERVICENAME))
                         {
-                            System.Diagnostics.EventLog.CreateEventSource(
+                            EventLog.CreateEventSource(
                                 SERVICENAME, SERVICENAME + ".log");
                         }
                         logging.AddEventLog(new Microsoft.Extensions.Logging.EventLog.EventLogSettings()

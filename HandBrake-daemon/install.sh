@@ -21,7 +21,7 @@ function upgrade () {
 	printf "done\n"
 	
 	printf "  - Replacing binary..."
-	cp -v $tmp_dir/HandBrake-daemon /usr/local/bin/handbrake-daemon
+	cp -v $tmp_dir/handbrake-daemon /usr/local/bin/handbrake-daemon
 	[ "$?" -ne "0" ] && printf "\n" && exit
 	
 	printf "\nReplacement complete.\n\n"
@@ -40,7 +40,7 @@ function upgrade () {
 function install () {
 	printf "\n - Copying necessary files...\n"
 	printf "   - HandBrake binary: "
-	cp -v HandBrake-daemon /usr/local/bin/handbrake-daemon
+	cp -v handbrake-daemon /usr/local/bin/handbrake-daemon
 	[ "$?" -ne "0" ] && printf "\n   ERROR: Are you trying to update? Use ./install.sh --update\n" && exit
 	
 	printf "   - Appsettings.json: "

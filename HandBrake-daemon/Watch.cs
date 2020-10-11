@@ -80,8 +80,8 @@ namespace HandBrake_daemon
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                string serviceFile = "/etc/systemd/system/handbrake-daemon.service";
-                if (!File.Exists(serviceFile)) throw new Exception("SystemD service unit for handbrake-daemon does not exist. Please install the service before proceeding.");
+                //string serviceFile = "/etc/systemd/system/handbrake-daemon.service";
+                //if (!File.Exists(serviceFile)) throw new Exception("SystemD service unit for handbrake-daemon does not exist. Please install the service before proceeding.");
                 //var userReg = @"^[#?]User=(.*)$";
                 //var groupReg = @"^[#?]Group=(.*)$";
                 //string gid, uid;
@@ -133,10 +133,10 @@ namespace HandBrake_daemon
         {
             if (watch.Extentions.Contains(Path.GetExtension(filePath).Replace(".",string.Empty)))
             {
-                logger.LogInformation($"SCANNER=> Media found: {filePath}");
+                logger.LogInformation($"WATCHER=> Queuing: {filePath}");
                 _QueueService.Add(new MediaItem(watch, filePath, Path.GetFileName(filePath)));
             }
-            else logger.LogDebug($"Scanner=> Skipping: {filePath}");
+            else logger.LogDebug($"WATCHER=> Skipping: {filePath}");
         }
         private void ScanWatchDirs()
         {
@@ -207,9 +207,10 @@ namespace HandBrake_daemon
         private void LoadWatchlist()
         {
             Watching = ReadConfd(ConfPath) ?? new List<Watch>();
-            logger.LogInformation($"Loaded {Watching.Count} items to watchers.");
+            logger.LogInformation($"WATCHER=> Loaded {Watching.Count} watches.");
             foreach (var instance in Watching)
             {
+                logger.LogDebug($"WATCHER=> Watching: {instance.Source}");
                 Watchers.Add(CreateWatcher(instance));
             }
         }

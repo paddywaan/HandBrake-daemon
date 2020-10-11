@@ -3,6 +3,9 @@
     "HandbrakeCLI-daemon": {
       "commandName": "Project",
       "commandLineArgs": "start"
+    },
+    "Docker": {
+      "commandName": "Docker"
     }
   }
 }

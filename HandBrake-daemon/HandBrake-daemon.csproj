@@ -1,5 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<Project Sdk="Microsoft.NET.Sdk;Microsoft.NET.Sdk.Publish">
   <PropertyGroup>
     <Name>HandBrake_daemon</Name>
     <OutputType>Exe</OutputType>
@@ -7,27 +6,26 @@
     <RootNamespace>HandBrake_daemon</RootNamespace>
     <AssemblyName>handbrake-daemon</AssemblyName>
     <Version>1.0.0</Version>
-	<Deterministic>false</Deterministic>
-	<AssemblyVersion>1.0.0.*</AssemblyVersion>
-	<FileVersion>1.0.0.0</FileVersion>
-	<Authors>Paddywaan</Authors>
-	<Description>A directory watcher daemon for HandBrake-CLI</Description>
-	<RepositoryUrl>https://github.com/paddywaan/HandBrake-daemon</RepositoryUrl>
-	<RepositoryType>git</RepositoryType>
-	<PackageProjectUrl>https://github.com/paddywaan/HandBrake-daemon</PackageProjectUrl>
+    <Deterministic>false</Deterministic>
+    <AssemblyVersion>1.0.0.*</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Authors>Paddywaan</Authors>
+    <Description>A directory watcher daemon for HandBrake-CLI</Description>
+    <RepositoryUrl>https://github.com/paddywaan/HandBrake-daemon</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/paddywaan/HandBrake-daemon</PackageProjectUrl>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
-
   <ItemGroup>
     <None Remove="default.conf" />
+    <None Remove="Dockerfile" />
   </ItemGroup>
-
   <ItemGroup>
     <EmbeddedResource Include="default.conf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </EmbeddedResource>
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="ini-parser-netstandard" Version="2.5.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="3.1.6" />
@@ -35,10 +33,10 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.6" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Systemd" Version="3.1.6" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="3.1.6" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.10.9" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="System.IO.FileSystem.AccessControl" Version="4.7.0" />
   </ItemGroup>
-
   <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -63,5 +61,8 @@
   </ItemGroup>
   <ItemGroup>
     <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="..\.dockerignore" />
   </ItemGroup>
 </Project>

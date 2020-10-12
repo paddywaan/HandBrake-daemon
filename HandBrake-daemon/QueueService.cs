@@ -93,7 +93,7 @@ namespace HandBrake_daemon
                         var poppedQueue = HBQueue.Dequeue();
                         var argsSB = new StringBuilder();
 
-                        var baseArgs = $"--preset-import-file \"{poppedQueue.WatchInstance.ProfilePath}\" -Z {poppedQueue.WatchInstance.ProfileName}" +
+                        var baseArgs = $"--preset-import-file \"{poppedQueue.WatchInstance.ProfilePath}\" -Z \"{poppedQueue.WatchInstance.ProfileName}\"" +
                             $" -i \"{poppedQueue.FilePath}\"";
                         argsSB.Append(baseArgs);
                         

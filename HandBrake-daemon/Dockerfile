@@ -21,4 +21,5 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 COPY --from=publish /app/publish/default.conf .
-ENTRYPOINT ["dotnet", "handbrake-daemon.dll"]
+ENTRYPOINT ["bash", "dockerInit.sh"]
+#ENTRYPOINT ["dotnet", "handbrake-daemon.dll"]

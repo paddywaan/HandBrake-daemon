@@ -5,7 +5,8 @@
       "commandLineArgs": "start"
     },
     "Docker": {
-      "commandName": "Docker"
+      "commandName": "Docker",
+      "commandLineArgs": "-v \"D:\\\\Elliot\\\\VirtualBox VMs\\\\VShare\\\\dockerMount\":\\/mnt\\/handbrake"
     }
   }
 }

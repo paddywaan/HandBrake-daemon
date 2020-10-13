@@ -1,0 +1,5 @@
+version: '3.4'
+
+services:
+  handbrake-daemon:
+    entrypoint: "sh -c '/app/dockerInit.sh && tail -f /dev/null'"

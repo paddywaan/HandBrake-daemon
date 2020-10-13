@@ -18,7 +18,6 @@
   </PropertyGroup>
   <ItemGroup>
     <None Remove="default.conf" />
-    <None Remove="Dockerfile" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="default.conf">
@@ -51,6 +50,10 @@
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </None>
     <None Update="uninstall.sh">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </None>
+    <None Update="Dockerfile">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </None>

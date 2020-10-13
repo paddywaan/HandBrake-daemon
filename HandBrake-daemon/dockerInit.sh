@@ -1,14 +1,17 @@
 #!/bin/bash
 mountdir=/mnt/handbrake
-conf=default.conf
 settings="$mountdir"/appsettings.json
-if [[ ! -f /etc/"$conf" && ! -f /mnt/"$mountdir" ]]; then
-        cp /app/default.conf /etc/handbrake-daemon.conf
-        ln -s /etc/handbrake-daemon.conf /mnt/handbrake/handbrake-daemon.conf
+echo Initializing docker container
+if [[ ! -f /etc/"$conf" ]]; then #This is first run.
+    echo Initialized watcher
+    if [[ ! -f "$mountdir"/handbrake-daemon.conf ]]; then #Init was not called before, therefore we use blank config.
+        cp default.conf "$mountdir"/handbrake-daemon.conf
+    fi
 fi
+cp "$mountdir"/handbrake-daemon.conf /etc/handbrake-daemon.conf #Move the hostfile to take effect inside the container.
 if [[ ! -f "$settings" ]]; then
-        cp /app/appsettings.json "$mountdir"/appsettings.json
-        rm /app/appsettings.json
-        ln -s "$mountdir"/appsettings.json /app/appsettings.json
+    echo Initialized appsettings
+    cp appsettings.json "$settings"
 fi
+cp "$settings" appsettings.json #Move the hostfile to take effect inside the container.
 dotnet handbrake-daemon.dll

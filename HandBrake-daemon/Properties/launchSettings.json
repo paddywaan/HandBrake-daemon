@@ -1,12 +1,12 @@
 {
   "profiles": {
-    "HandbrakeCLI-daemon": {
+    "HandBrake-daemon": {
       "commandName": "Project",
       "commandLineArgs": "start"
     },
     "Docker": {
       "commandName": "Docker",
-      "commandLineArgs": "-v \"D:\\\\Elliot\\\\VirtualBox VMs\\\\VShare\\\\dockerMount\":\\/mnt\\/handbrake"
+      "commandLineArgs": ""
     }
   }
 }

@@ -16,12 +16,12 @@ namespace HandBrake_daemon
     {
         public Watch(string source, string destination, string origin, string profilePath, List<string> extentions, bool show)
         {
-            this.Source = source ?? throw new ArgumentNullException(nameof(source));
-            this.Destination = destination ?? throw new ArgumentNullException(nameof(destination));
-            this.ProfilePath = profilePath ?? throw new ArgumentNullException(nameof(profilePath));
-            this.Extentions = extentions ?? new List<string>{ "mp4", "mkv", "avi" };
-            this.Origin = origin;
-            this.IsShow = show;
+            Source = source ?? throw new ArgumentNullException(nameof(source));
+            Destination = destination ?? throw new ArgumentNullException(nameof(destination));
+            ProfilePath = profilePath ?? throw new ArgumentNullException(nameof(profilePath));
+            Extentions = extentions ?? new List<string>{ "mp4", "mkv", "avi" };
+            Origin = origin;
+            IsShow = show;
         }
 
         public string Source { private set; get; }
@@ -34,13 +34,13 @@ namespace HandBrake_daemon
         {
             get
             {
-                return Path.GetFileName(ProfilePath).Replace(".json",String.Empty);
+                return Path.GetFileName(ProfilePath).Replace(".json", string.Empty);
             }
         }
         public int CompareTo(object obj)
         {
             var watch = obj as Watch;
-            return (watch.Source.CompareTo(this.Source) == 0) ? watch.Destination.CompareTo(this.Destination) : watch.Source.CompareTo(this.Source);
+            return (watch.Source.CompareTo(Source) == 0) ? watch.Destination.CompareTo(Destination) : watch.Source.CompareTo(Source);
         }
     }
     public interface IWatcherService
@@ -52,13 +52,12 @@ namespace HandBrake_daemon
     public class WatcherService : IWatcherService, IHostedService, IDisposable
     {
         private List<Watch> Watching = new List<Watch>();
-        readonly ILogger<WatcherService> logger;
+        private readonly ILogger<WatcherService> logger;
         private readonly List<FileSystemWatcher> Watchers = new List<FileSystemWatcher>();
         private readonly QueueService _QueueService;
         private static string ConfPath;
-        private static IHostApplicationLifetime HostApp;
         private const string CONFNAME = "handbrake-daemon.conf";
-        public WatcherService(ILogger<WatcherService> loggingService, IHostApplicationLifetime hostApp /* IServiceProvider _provider*/)
+        public WatcherService(ILogger<WatcherService> loggingService)
         {
             logger = loggingService;
             logger.LogInformation("Loading watchers");
@@ -69,7 +68,6 @@ namespace HandBrake_daemon
                 using var sr = new StreamReader(defConf);
                 File.WriteAllText(ConfPath, sr.ReadToEnd());
             }
-            HostApp = hostApp;
             _QueueService = QueueService.Instance;
             LoadWatchlist();
             CheckPermissions();
@@ -156,9 +154,9 @@ namespace HandBrake_daemon
                 AddQueueItem(watch, file);
             }
         }
-        FileSystemWatcher CreateWatcher(Watch instance)
+        private FileSystemWatcher CreateWatcher(Watch instance)
         {
-            FileSystemWatcher watcher = new FileSystemWatcher(instance.Source)
+            var watcher = new FileSystemWatcher(instance.Source)
             {
                 Path = instance.Source
             };
@@ -233,8 +231,8 @@ namespace HandBrake_daemon
         }
         public static List<Watch>ReadConfd(string fPath)
         {
-            List<Watch> tempWatchers = new List<Watch>();
-            FileIniDataParser parser = new FileIniDataParser();
+            var tempWatchers = new List<Watch>();
+            var parser = new FileIniDataParser();
             var x = parser.ReadFile(fPath);
             foreach(var section in x.Sections)
             {

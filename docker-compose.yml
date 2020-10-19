@@ -2,7 +2,6 @@ version: '3.4'
 
 services:
   handbrake-daemon:
-    entrypoint: /app/dockerInit.sh
     image: ${DOCKER_REGISTRY-}handbrakedaemon
     build:
       context: .

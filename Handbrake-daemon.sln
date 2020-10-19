@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HandBrake-daemon", "HandBra
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HandBrake-daemonUnitTest", "HandBrake-daemonUnitTest\HandBrake-daemonUnitTest.csproj", "{39E740D1-96E2-4167-AA42-279146341808}"
 EndProject
-Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{F78C8670-1B8B-4990-982A-0B088C44737C}"
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{686F5B72-450C-40DA-B627-9D108A084E01}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,10 +23,10 @@ Global
 		{39E740D1-96E2-4167-AA42-279146341808}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{39E740D1-96E2-4167-AA42-279146341808}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{39E740D1-96E2-4167-AA42-279146341808}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F78C8670-1B8B-4990-982A-0B088C44737C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F78C8670-1B8B-4990-982A-0B088C44737C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F78C8670-1B8B-4990-982A-0B088C44737C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F78C8670-1B8B-4990-982A-0B088C44737C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{686F5B72-450C-40DA-B627-9D108A084E01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{686F5B72-450C-40DA-B627-9D108A084E01}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{686F5B72-450C-40DA-B627-9D108A084E01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{686F5B72-450C-40DA-B627-9D108A084E01}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

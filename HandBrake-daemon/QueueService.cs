@@ -16,15 +16,29 @@ namespace HandBrake_daemon
     public class MediaItem
     {
         public Watch WatchInstance;
+        /// <summary>
+        /// Returns the full filepath 
+        /// </summary>
         public string FilePath { get; }
+        /// <summary>
+        /// Returns only the FileName, inclusive of extention.
+        /// </summary>
         public string FileName { get; }
+        /// <summary>
+        /// Returns the extention of the file.
+        /// </summary>
         public string Extention { get; }
 
-        public MediaItem(Watch watchInstance, string fpath, string fname)
+        /// <summary>
+        /// Instnatiates a new MediaItem
+        /// </summary>
+        /// <param name="watchInstance">The watch instance this media item belongs too.</param>
+        /// <param name="fpath">The filepath for the source media.</param>
+        public MediaItem(Watch watchInstance, string fpath)
         {
             WatchInstance = watchInstance;
             this.FilePath = fpath;
-            this.FileName = fname;
+            this.FileName = Path.GetFileName(fpath);
             this.Extention = Path.GetExtension(FilePath); //Regex.Match(fname, "[.][a-zA-Z0-9]{1,4}$").Value;
         }
     }
@@ -92,10 +106,8 @@ namespace HandBrake_daemon
                         logger.LogDebug($"File: {HBQueue.Peek().FilePath} is not locked. Processing...");
                         var poppedQueue = HBQueue.Dequeue();
                         var argsSB = new StringBuilder();
-
-                        var baseArgs = $"--preset-import-file \"{poppedQueue.WatchInstance.ProfilePath}\" -Z \"{poppedQueue.WatchInstance.ProfileName}\"" +
-                            $" -i \"{poppedQueue.FilePath}\"";
-                        argsSB.Append(baseArgs);
+                        if (!string.IsNullOrEmpty(poppedQueue.WatchInstance.ProfilePath)) argsSB.Append($"--preset-import-file \"{poppedQueue.WatchInstance.ProfilePath}\" ");
+                        argsSB.Append($"-Z \"{poppedQueue.WatchInstance.ProfileName}\"" + $" -i \"{poppedQueue.FilePath}\"");
                         
                         //Add all relevant subtitles to the process
                         var tup = GetSubs(poppedQueue.FilePath);
@@ -287,5 +299,27 @@ namespace HandBrake_daemon
         }
     }
 
+    public static class ThreadExtentions
+    {
+        /// <summary>
+        /// Waits asynchronously for the process to exit.
+        /// </summary>
+        /// <param name="process">The process to wait for cancellation.</param>
+        /// <param name="cancellationToken">A cancellation token. If invoked, the task will return 
+        /// immediately as canceled.</param>
+        /// <returns>A Task representing waiting for the process to end.</returns>
+        public static Task WaitForExitAsync(this Process process,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (process.HasExited) return Task.CompletedTask;
 
+            var tcs = new TaskCompletionSource<object>();
+            process.EnableRaisingEvents = true;
+            process.Exited += (sender, args) => tcs.TrySetResult(null);
+            if (cancellationToken != default(CancellationToken))
+                cancellationToken.Register(() => tcs.SetCanceled());
+
+            return process.HasExited ? Task.CompletedTask : tcs.Task;
+        }
+    }
 }

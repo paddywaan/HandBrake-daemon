@@ -9,6 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using IniParser;
 using System.Reflection;
+using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace HandBrake_daemon
 {
@@ -27,15 +29,21 @@ namespace HandBrake_daemon
         public string Source { private set; get; }
         public string Destination { private set; get; }
         public string Origin { private set; get; }
-        public string ProfilePath { private set; get; }
+        public string ProfilePath { set; get; }
         public List<string> Extentions { private set; get; }
         public bool IsShow { private set; get; }
+        private string profileName;
         public string ProfileName
         {
             get
             {
-                return Path.GetFileName(ProfilePath).Replace(".json", string.Empty);
+                if (File.Exists(ProfilePath))
+                    return Path.GetFileName(ProfilePath).Replace(".json", string.Empty);
+                else if (!string.IsNullOrEmpty(ProfilePath))
+                    return profileName;
+                else throw new Exception("Unable to find profile, this exception should never occur. Please report this issue.");
             }
+            set { profileName = value; }
         }
         public int CompareTo(object obj)
         {
@@ -57,6 +65,8 @@ namespace HandBrake_daemon
         private readonly QueueService _QueueService;
         private static string ConfPath;
         private const string CONFNAME = "handbrake-daemon.conf";
+        public static List<string> Presets = new List<string>();
+
         public WatcherService(ILogger<WatcherService> loggingService)
         {
             logger = loggingService;
@@ -69,10 +79,25 @@ namespace HandBrake_daemon
                 File.WriteAllText(ConfPath, sr.ReadToEnd());
             }
             _QueueService = QueueService.Instance;
+
+
+            var unprocessedPresets = Process.Start(new ProcessStartInfo
+            {
+                FileName = ("HandBrakeCLI"),
+                Arguments = "--preset-list",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+
+            }).StandardError.ReadToEnd();
+            var reg = @"\n[\s]{4}([^\s].*)$";
+            Presets.AddRange(from Match m in Regex.Matches(unprocessedPresets, reg, RegexOptions.Multiline)
+                             select m.Groups[1].ToString().Trim());
             LoadWatchlist();
             CheckPermissions();
             ScanWatchDirs();
         }
+
+
 
         private void CheckPermissions()
         {
@@ -132,7 +157,7 @@ namespace HandBrake_daemon
             if (watch.Extentions.Contains(Path.GetExtension(filePath).Replace(".",string.Empty)))
             {
                 logger.LogInformation($"WATCHER=> Queuing: {filePath}");
-                _QueueService.Add(new MediaItem(watch, filePath, Path.GetFileName(filePath)));
+                _QueueService.Add(new MediaItem(watch, filePath));
             }
             else logger.LogDebug($"WATCHER=> Skipping: {filePath}");
         }
@@ -245,7 +270,11 @@ namespace HandBrake_daemon
                 if (!Directory.Exists(tWatch.Source)) throw new Exception($"Config references a directory which does not exist: {tWatch.Source}");
                 if (!Directory.Exists(tWatch.Destination)) throw new Exception($"Config references a directory which does not exist: {tWatch.Destination}");
                 if (!string.IsNullOrEmpty(tWatch.Origin) && !Directory.Exists(tWatch.Origin)) throw new Exception($"Config file references a directory which does not exist: {tWatch.Origin}");
-                if (!File.Exists(tWatch.ProfilePath)) throw new Exception($"Config references a file which does not exist: {tWatch.ProfilePath}");
+                if (!File.Exists(tWatch.ProfilePath))
+                {
+                    if(!Presets.Contains(tWatch.ProfilePath)) throw new Exception($"Config references a file, or built-in preset which does not exist: {tWatch.ProfilePath}");
+                    tWatch.ProfilePath = string.Empty;
+                }
                 tempWatchers.Add(tWatch);
             }
             return tempWatchers;

@@ -8,11 +8,15 @@ I am not a professional and this is my first attempt at maintaining a project, w
 ***
 ### Change log
 
+**v1.1.0**
+* Added docker support and build process.
+* Added ability to specify default profiles(by name) in the profilePath configuration.
+
 **v1.0.0** - Release.
 * Watch configurations can be added via the config file.
 * Supports multiple watches.
 * Watches support a `source`, `destination`, and `origin` settings.
-* Watches can be individually configured to use different HandBrake encoding profiles via the `profilePath` setting.
+* Watches can be individually customised to use different HandBrake encoding profiles via the `profilePath` setting.
 * Watches can be configured to place the output media inside of a nested, episode directory structure. i.e. `/DestinationDirectory/TitleName/Season #/output.mp4`
 * Watcher service scans the watched directories on start, and continues to watch the locations for new, and removed files.
 * Subtitles matching the source name (and/or extending the name with a language, or contained within a subdirectory named `subs`), will be embedded inside the output media.
@@ -23,7 +27,7 @@ I am not a professional and this is my first attempt at maintaining a project, w
 Afterwards, you must either restart (windows) or `source ~/.*rc`, depending on which shell you use.
 
 ***
-#### Linux Installation & Upgrade
+### Linux Installation & Upgrade
 ##### Automatic method
 
   * Verify the contents of [install.sh](https://raw.githubusercontent.com/paddywaan/HandBrake-daemon/master/HandBrake-daemon/install.sh)
@@ -34,13 +38,8 @@ sudo bash -c "$(curl -s -L https://raw.githubusercontent.com/paddywaan/HandBrake
 ##### Manual method
 [Download](https://github.com/paddywaan/HandBrake-daemon/releases/latest) the zip and extract, then run the install.sh after verifying its contents. The install script will move the necessary config files to their appropriate locations.
 
-Please double check that `/etc/systemd/system/handbrake-daemon.service` is to your liking. You probably want to set the `WorkingDirectory`, `User`, and `Group` for the service to match your file system. If you change the WD, make sure to place the appsettings.json inside the new WD.
-If you have multiple, different locations under different users, please add them to a group which the service daemon runs under.
 
-After you have configured the systemd unit, please reload the daemon with: `sudo systemctl daemon-reload` and proceed with configuration.
-
-#### Linux Removal / Uninstall
-##### Automatic method
+##### Linux Automatic Removal / Uninstall
 
   * Verify the contents of [uninstall.sh](https://raw.githubusercontent.com/paddywaan/HandBrake-daemon/master/HandBrake-daemon/uninstall.sh)
   * Run the follwing command in a terminal emulator of your liking:
@@ -48,9 +47,27 @@ After you have configured the systemd unit, please reload the daemon with: `sudo
 sudo bash -c "$(curl -s -L https://raw.githubusercontent.com/paddywaan/HandBrake-daemon/master/HandBrake-daemon/uninstall.sh)"
 ```
 
-#### Windows Installation
-[Download](https://github.com/paddywaan/HandBrake-daemon/releases/latest) and extract the zip to the desired location, then run install.cmd as administrator to register the binary as a system service.
-***
+### Windows Installation
+[Download](https://github.com/paddywaan/HandBrake-daemon/releases/latest) and extract the zip to the desired location, then run install.cmd as administrator to register the binary as a system service. You may now manipulate the service via `services.msc`
+
+
+### Docker Installation
+
+The docker image hes been setup to automatically create some directories and apply configurations, so you may leave the guest mountpoint `/mnt/handbrake` untouched if you do not have specific mounting requirements. Set the host location to be mounted and ensure the host directory exists, then run the following:
+```
+docker pull paddywaan/handbrakedaemon
+sudo docker run -d -it --name handbrakedaemon -v /Host/Mount/Location:/mnt/handbrake paddywaan/handbrakedaemon handbrake-daemon
+```
+
+Nagivate to `/Host/Mount/Location` and two files, `appsettings.json` and `handbrake-daemon.conf` will have been created, alongside 3 directories. The config has been setup to automatically provide a working configuration with preset directory structure.
+
+
+Restart the docker container using `sudo docker restart handbrakedaemon`
+
+**CAUTION:** Moving files from an NTFS host will not trigger INotify on the guest system. The guest system must have the files moved or created within the context of the guest, or an ext4FS in order that INotify is triggered (This is what does the legwork for active directory watching).
+
+---
+
 ### Configuration
 Linux platforms store the configuration in `/etc/handbrake-daemon.conf`
 Windows platforms store the configuration in the installation/extracted directory.

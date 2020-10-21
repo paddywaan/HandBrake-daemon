@@ -75,12 +75,11 @@ Windows platforms store the configuration in the installation/extracted director
 **At least a single watcher must be defined in order for the service to run.**
 **Please make sure that you create all referenced directories and profiles with appropriate permissions before running the service**
 
-The source directory is used as the directory to watch for new media to process, and upon completion the output will be placed inside the destination directory.
-If an *origin* directory is specified, the source file will be moved to the *Origin*al Media directory.
-If none is specified, the source will be deleted rather than moved.
-Watchers will only queue file extensions which are defined in the watch config.
-Transcode settings are taken from the profile .json, which can be created when running HandBrake's UI on a desktop platform, for ease of configuration. Alternatively
-The *isShow* boolean can be set to true in order to nest the output media inside subdirectories to aid organization of seasonal content.
+* The **source directory** is used as the directory to watch for new media to process, and upon completion the output will be placed inside the **destination directory**.
+* If an **origin** directory is specified, the source file will be moved to the Original Media directory. If none is specified, the source will be deleted rather than moved.
+* Watchers will only queue file **extensions** which are defined in the watch config. If none are specified, they default to `mp4,mkv,avi`
+* Transcode settings are taken from the **profilePath**, which references a .json file containing a custom preset which may be exported from HandBrake's desktop UI, or if the built-in profiles are satisfactory, you may use `HandBrakeCLI -z` to list all available profile titles. Simply replace the profile path with the title, inclusive of spaces, no escape sequences are required.
+* The **isShow** boolean can be set to true in order to nest the output media inside subdirectories to aid organization of seasonal content.
 
 Finally, you may start the service for the first time:
 

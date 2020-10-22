@@ -11,6 +11,7 @@ I am not a professional and this is my first attempt at maintaining a project, w
 **v1.1.0**
 * Added docker support and build process.
 * Added ability to specify default profiles(by name) in the profilePath configuration.
+* Added configurations to define pre/post-scripts to execute for each transcoded item.
 
 **v1.0.0** - Release.
 * Watch configurations can be added via the config file.
@@ -80,6 +81,8 @@ Windows platforms store the configuration in the installation/extracted director
 * Watchers will only queue file **extensions** which are defined in the watch config. If none are specified, they default to `mp4,mkv,avi`
 * Transcode settings are taken from the **profilePath**, which references a .json file containing a custom preset which may be exported from HandBrake's desktop UI, or if the built-in profiles are satisfactory, you may use `HandBrakeCLI -z` to list all available profile titles. Simply replace the profile path with the title, inclusive of spaces, no escape sequences are required.
 * The **isShow** boolean can be set to true in order to nest the output media inside subdirectories to aid organization of seasonal content.
+* The preScript path can be set to run a script prior to the transcode process. The arguments: SourcePath DestinationPath OriginPath and (Boolean)isShow are passed to the invoked script. The transcode process for this item will be skipped the script was not successful.
+* The postScript path can be set to run a script after the transcoding process. The arguments: DestinationPath OriginPath and (Boolean)isShow are passed to the invoked script. The script will not run if the transcode was not successful.
 
 Finally, you may start the service for the first time:
 

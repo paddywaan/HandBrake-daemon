@@ -16,7 +16,7 @@ namespace HandBrake_daemon
 {
     public class Watch : IComparable
     {
-        public Watch(string source, string destination, string origin, string profilePath, List<string> extentions, bool show)
+        public Watch(string source, string destination, string origin, string profilePath, List<string> extentions, bool show, string preScript = null, string postScript = null)
         {
             Source = source ?? throw new ArgumentNullException(nameof(source));
             Destination = destination ?? throw new ArgumentNullException(nameof(destination));
@@ -24,6 +24,8 @@ namespace HandBrake_daemon
             Extentions = extentions ?? new List<string>{ "mp4", "mkv", "avi" };
             Origin = origin;
             IsShow = show;
+            PreScript = preScript;
+            PostScript = postScript;
         }
 
         public string Source { private set; get; }
@@ -33,13 +35,15 @@ namespace HandBrake_daemon
         public List<string> Extentions { private set; get; }
         public bool IsShow { private set; get; }
         private string profileName;
+        public string PreScript { private set; get; }
+        public string PostScript { private set; get; }
         public string ProfileName
         {
             get
             {
                 if (File.Exists(ProfilePath))
                     return Path.GetFileName(ProfilePath).Replace(".json", string.Empty);
-                else if (!string.IsNullOrEmpty(ProfilePath))
+                else if (!string.IsNullOrEmpty(profileName))
                     return profileName;
                 else throw new Exception("Unable to find profile, this exception should never occur. Please report this issue.");
             }
@@ -266,15 +270,20 @@ namespace HandBrake_daemon
                     if (key.Value == null && (key.KeyName != "origin" || key.KeyName != "isShow")) throw new Exception($"Missing config parameter for: {section}:{key}");
                 }
                 
-                var tWatch = new Watch(section.Keys["source"], section.Keys["destination"], section.Keys["origin"], section.Keys["profilePath"], section.Keys["extensions"]?.Split(",").ToList(), Convert.ToBoolean(section.Keys["isShow"]));
-                if (!Directory.Exists(tWatch.Source)) throw new Exception($"Config references a directory which does not exist: {tWatch.Source}");
-                if (!Directory.Exists(tWatch.Destination)) throw new Exception($"Config references a directory which does not exist: {tWatch.Destination}");
-                if (!string.IsNullOrEmpty(tWatch.Origin) && !Directory.Exists(tWatch.Origin)) throw new Exception($"Config file references a directory which does not exist: {tWatch.Origin}");
+                var tWatch = new Watch(section.Keys["source"], section.Keys["destination"], section.Keys["origin"], section.Keys["profilePath"], section.Keys["extensions"]?.Split(",").ToList(), Convert.ToBoolean(section.Keys["isShow"]),
+                    section.Keys["preScript"], section.Keys["postScript"]);
+                if (!Directory.Exists(tWatch.Source)) throw new DirectoryNotFoundException($"{section.SectionName} references a directory which does not exist: {tWatch.Source}");
+                if (!Directory.Exists(tWatch.Destination)) throw new DirectoryNotFoundException($"{section.SectionName} references a directory which does not exist: {tWatch.Destination}");
+                if (!string.IsNullOrEmpty(tWatch.Origin) && !Directory.Exists(tWatch.Origin)) throw new DirectoryNotFoundException($"{section.SectionName} file references a directory which does not exist: {tWatch.Origin}");
                 if (!File.Exists(tWatch.ProfilePath))
                 {
-                    if(!Presets.Contains(tWatch.ProfilePath)) throw new Exception($"Config references a file, or built-in preset which does not exist: {tWatch.ProfilePath}");
+                    if(!Presets.Contains(tWatch.ProfilePath)) throw new FileNotFoundException($"{section.SectionName} references a preset which does not exist: {tWatch.ProfilePath}");
+                    tWatch.ProfileName = tWatch.ProfilePath;
                     tWatch.ProfilePath = string.Empty;
+                    
                 }
+                if (!string.IsNullOrEmpty(tWatch.PreScript) && !File.Exists(tWatch.PreScript)) throw new FileNotFoundException($"{section.SectionName} references a preScript which does not exist: {tWatch.PreScript}");
+                if (!string.IsNullOrEmpty(tWatch.PostScript) && !File.Exists(tWatch.PostScript)) throw new FileNotFoundException($"{section.SectionName} references a postScript which does not exist: {tWatch.PostScript}");
                 tempWatchers.Add(tWatch);
             }
             return tempWatchers;

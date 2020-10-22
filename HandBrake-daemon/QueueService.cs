@@ -17,7 +17,7 @@ namespace HandBrake_daemon
     {
         public Watch WatchInstance;
         /// <summary>
-        /// Returns the full filepath 
+        /// Returns the full source filepath 
         /// </summary>
         public string FilePath { get; }
         /// <summary>
@@ -105,53 +105,66 @@ namespace HandBrake_daemon
                     {
                         logger.LogDebug($"File: {HBQueue.Peek().FilePath} is not locked. Processing...");
                         var poppedQueue = HBQueue.Dequeue();
-                        var argsSB = new StringBuilder();
-                        if (!string.IsNullOrEmpty(poppedQueue.WatchInstance.ProfilePath)) argsSB.Append($"--preset-import-file \"{poppedQueue.WatchInstance.ProfilePath}\" ");
-                        argsSB.Append($"-Z \"{poppedQueue.WatchInstance.ProfileName}\"" + $" -i \"{poppedQueue.FilePath}\"");
-                        
-                        //Add all relevant subtitles to the process
-                        var tup = GetSubs(poppedQueue.FilePath);
-                        if (tup.Item1.Count > 0)
+                        Process pre = null;
+                        if (!string.IsNullOrEmpty(poppedQueue.WatchInstance.PreScript))
                         {
-                            argsSB.Append(" --srt-file \"" + String.Join(",", tup.Item1) + "\"");
-                            argsSB.Append(" --srt-lang \"" + String.Join(",", tup.Item2) + "\"");
-                            argsSB.Append(" --all-subtitles");
+                            var preScriptArgs = new List<string>() { poppedQueue.FilePath.Enquote(), poppedQueue.WatchInstance.Destination.Enquote(), poppedQueue.WatchInstance.Origin.Enquote(), poppedQueue.WatchInstance.IsShow.ToString() };
+                            pre = ExecuteScript(poppedQueue.WatchInstance.PreScript, preScriptArgs);
                         }
-
-                        //Determine output directory for convenience
-                        string destDir = poppedQueue.WatchInstance.Destination; ;
-                        if (poppedQueue.WatchInstance.IsShow)
+                        if (string.IsNullOrEmpty(poppedQueue.WatchInstance.PreScript) || pre?.ExitCode == 0)
                         {
-                            var DirName = new DirectoryInfo(Path.GetDirectoryName(poppedQueue.FilePath)).Name;
-                            var matchReg = new Regex(@"(.*?).(s|season)\ ?(\d{1,2})", RegexOptions.IgnoreCase);
+                            var argsSB = new StringBuilder();
+                            if (!string.IsNullOrEmpty(poppedQueue.WatchInstance.ProfilePath)) argsSB.Append($"--preset-import-file \"{poppedQueue.WatchInstance.ProfilePath}\" ");
+                            argsSB.Append($"-Z \"{poppedQueue.WatchInstance.ProfileName}\"" + $" -i \"{poppedQueue.FilePath}\"");
 
-                            if (matchReg.IsMatch(DirName))
+                            //Add all relevant subtitles to the process
+                            var tup = GetSubs(poppedQueue.FilePath);
+                            if (tup.Item1.Count > 0)
                             {
-                                destDir = poppedQueue.WatchInstance.Destination + Path.DirectorySeparatorChar + matchReg.Match(DirName).Groups[1]
-                                    + Path.DirectorySeparatorChar + "Season " + matchReg.Match(DirName).Groups[3];
-                                Directory.CreateDirectory(destDir);
+                                argsSB.Append(" --srt-file \"" + String.Join(",", tup.Item1) + "\"");
+                                argsSB.Append(" --srt-lang \"" + String.Join(",", tup.Item2) + "\"");
+                                argsSB.Append(" --all-subtitles");
                             }
-                        }
-                        argsSB.Append($" -o \"{destDir + Path.DirectorySeparatorChar + poppedQueue.FileName}\"");
 
-                        //Set up the process
-                        logger.LogInformation($"Encoding {poppedQueue.FileName}");
-                        logger.LogDebug($"Encoding using args: {argsSB}");
-                        HBService = new Process
+                            //Determine output directory for convenience
+                            string destDir = poppedQueue.WatchInstance.Destination; ;
+                            if (poppedQueue.WatchInstance.IsShow)
+                            {
+                                var DirName = new DirectoryInfo(Path.GetDirectoryName(poppedQueue.FilePath)).Name;
+                                var matchReg = new Regex(@"(.*?).(s|season)\ ?(\d{1,2})", RegexOptions.IgnoreCase);
+
+                                if (matchReg.IsMatch(DirName))
+                                {
+                                    destDir = poppedQueue.WatchInstance.Destination + Path.DirectorySeparatorChar + matchReg.Match(DirName).Groups[1]
+                                        + Path.DirectorySeparatorChar + "Season " + matchReg.Match(DirName).Groups[3];
+                                    Directory.CreateDirectory(destDir);
+                                }
+                            }
+                            argsSB.Append($" -o \"{destDir + Path.DirectorySeparatorChar + poppedQueue.FileName}\"");
+
+                            //Set up the process
+                            logger.LogInformation($"Encoding {poppedQueue.FileName}");
+                            logger.LogDebug($"Encoding using args: {argsSB}");
+                            HBService = new Process
+                            {
+                                StartInfo = new ProcessStartInfo(HBProc, argsSB.ToString())
+                            };
+                            HBService.StartInfo.UseShellExecute = false;
+                            HBService.StartInfo.RedirectStandardOutput = false;
+                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) HBService.StartInfo.RedirectStandardError = true; //if we redirect standard error we can capture progress output.
+                            HBService.StartInfo.CreateNoWindow = true;
+                            stoppingToken.Register(() => HBService?.Kill()); //"No process is associated with this object" errors here are likely due to HandBrakeCLI exec not being found (is PATH correct?),
+                                                                             //or to referencing HBservice before it has been started.
+                            HBService.EnableRaisingEvents = true; //Allows our stopping token to interrupt the transcode
+                            HBService.Exited += new EventHandler((sender, e) => HBService_Exited(sender, e, poppedQueue));
+                            HBService.Start();
+                            logger.LogDebug($"Started HBCLI @ {HBService.StartTime}");
+                            HBService.PriorityClass = ProcessPriorityClass.BelowNormal;
+                        } 
+                        else
                         {
-                            StartInfo = new ProcessStartInfo(HBProc, argsSB.ToString())
-                        };
-                        HBService.StartInfo.UseShellExecute = false;
-                        HBService.StartInfo.RedirectStandardOutput = false;
-                        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) HBService.StartInfo.RedirectStandardError = true; //if we redirect standard error we can capture progress output.
-                        HBService.StartInfo.CreateNoWindow = true;
-                        stoppingToken.Register(() => HBService?.Kill()); //"No process is associated with this object" errors here are likely due to HandBrakeCLI exec not being found (is PATH correct?),
-                        //or to referencing HBservice before it has been started.
-                        HBService.EnableRaisingEvents = true; //Allows our stopping token to interrupt the transcode
-                        HBService.Exited += new EventHandler((sender, e) => HBService_Exited(sender, e, poppedQueue));
-                        HBService.Start();
-                        logger.LogDebug($"Started HBCLI @ {HBService.StartTime}");
-                        HBService.PriorityClass = ProcessPriorityClass.BelowNormal;
+                            logger.LogWarning($"{poppedQueue.WatchInstance.PreScript} exited with ErrorCode({pre.ExitCode}), skipping processing source media: {poppedQueue.FilePath}");
+                        }
                     }
                     else logger.LogWarning($"File {HBQueue.Peek().FilePath} is locked"); //Wait until the file is not busy
                 }
@@ -178,6 +191,12 @@ namespace HandBrake_daemon
                     else File.Move(poppedQueue.FilePath, poppedQueue.WatchInstance.Origin + Path.DirectorySeparatorChar + poppedQueue.FileName);
     
                     logger.LogDebug("Original file has been " + (delete ? "deleted." : "moved."));
+                    if (!string.IsNullOrEmpty(poppedQueue.WatchInstance.PostScript))
+                    {
+                        var destination = poppedQueue.WatchInstance.Destination + Path.DirectorySeparatorChar + poppedQueue.FileName;
+                        var post = ExecuteScript(poppedQueue.WatchInstance.PostScript, new List<string>() { destination.Enquote(), poppedQueue.WatchInstance.Origin.Enquote(), poppedQueue.WatchInstance.IsShow.ToString()});
+                        if (post.ExitCode != 0) logger.LogWarning($"PostScript {poppedQueue.WatchInstance.PostScript} exited with ErrorCode({post.ExitCode}) when processing: {destination}");
+                    }
                 } else {
                     logger.LogWarning($"Non 0 exitcode for: {poppedQueue.FilePath}, skipping post processing.");
                 }
@@ -297,6 +316,26 @@ namespace HandBrake_daemon
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX) || RuntimeInformation.IsOSPlatform(OSPlatform.FreeBSD)) return ':';
             throw new PlatformNotSupportedException();
         }
+
+        /// <summary>
+        /// Shell script executer
+        /// </summary>
+        /// <param name="path">Path to the shell script</param>
+        /// <param name="args">Arguments to pass to the script</param>
+        /// <returns>Returns process after completion.</returns>
+        public static Process ExecuteScript(string path, List<string> args)
+        {
+            string argList = string.Join(" ", args);
+            var p = Process.Start(
+                new ProcessStartInfo
+                {
+                    FileName = path,
+                    Arguments = argList,
+                    WorkingDirectory = Path.GetDirectoryName(path)
+                });
+            p.WaitForExit();
+            return p;
+        }
     }
 
     public static class ThreadExtentions
@@ -320,6 +359,20 @@ namespace HandBrake_daemon
                 cancellationToken.Register(() => tcs.SetCanceled());
 
             return process.HasExited ? Task.CompletedTask : tcs.Task;
+        }
+    }
+    public static class StringExtentions
+    {
+        /// <summary>
+        /// Enquotes the given string.
+        /// </summary>
+        /// <param name="text">The string to be encapsulated.</param>
+        /// <param name="quoteChar">The character to encapsulate with.</param>
+        /// <returns>Returns the encapsulated string</returns>
+        public static string Enquote(this string text, char? quoteChar = null)
+        {
+            var encapsulator = (quoteChar == null) ? '"' : quoteChar.Value;
+            return $"{encapsulator}{text}{encapsulator}";
         }
     }
 }
